@@ -4,6 +4,7 @@ urv/imas/behaviours/TimeAgent.class
 urv/imas/PingAgent.class
 urv/imas/protocols/ParallelContractNetResponderAgent.class
 urv/imas/protocols/ContractNetResponderAgent$1.class
+urv/imas/agents/UserAgent.class
 urv/imas/protocols/FIPARequestResponderAgent.class
 urv/imas/behaviours/FSMAgent$NamePrinter.class
 urv/imas/behaviours/FSMAgent$RandomGenerator.class

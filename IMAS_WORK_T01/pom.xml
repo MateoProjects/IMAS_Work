@@ -50,7 +50,7 @@
         </profile>
 
         <profile>
-            <id>jade-responders</id>
+            <id>jade-classifiers</id>
             <build>
                 <plugins>
                     <plugin>
@@ -62,10 +62,7 @@
                             <arguments>
                                 <argument>-gui</argument>
                                 <argument>-agents</argument>
-                                <argument>  responder1:urv.imas.protocols.ContractNetResponderAgent;
-                                            responder2:urv.imas.protocols.ContractNetResponderAgent;
-                                            responder3:urv.imas.protocols.ContractNetResponderAgent
-                                </argument>
+                                <argument>user:urv.imas.agents.UserAgent</argument>
                             </arguments>
                         </configuration>
                     </plugin>
