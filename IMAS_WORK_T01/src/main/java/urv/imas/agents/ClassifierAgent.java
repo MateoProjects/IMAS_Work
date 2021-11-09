@@ -3,16 +3,13 @@ package urv.imas.agents;
 import jade.core.Agent;
 import jade.core.AID;
 import jade.lang.acl.ACLMessage;
-import jade.lang.acl.MessageTemplate;
 import jade.proto.AchieveREInitiator;
-import jade.proto.AchieveREResponder;
 import jade.proto.ContractNetInitiator;
 import jade.domain.FIPANames;
 
 import java.util.Date;
 import java.util.Vector;
 import java.util.Enumeration;
-import weka.core.converters.ConverterUtils.DataSource;
 
 /**
  * This agent implements a simple Ping Agent that registers itself with the DF and
@@ -23,9 +20,8 @@ import weka.core.converters.ConverterUtils.DataSource;
  * @author Tiziana Trucco - CSELT S.p.A.
  * @version  $Date: 2010-04-08 13:08:55 +0200 (gio, 08 apr 2010) $ $Revision: 6297 $
  */
-public class UserAgent extends Agent
+public class ClassifierAgent extends Agent
 {
-    private int nResponders;
     private String CoordName = "coordinator";
     private AID CoordinatorAID;
 
@@ -49,7 +45,7 @@ public class UserAgent extends Agent
     }
 
     protected void setup() {
-        // Read name of coordinator as argument (NOT ACTIVE NOW)
+        // Read name of classifiers as arguments (NOT ACTIVE NOW)
         Object[] args = getArguments();
         if (args != null && args.length > 0) {}else{}
 
@@ -62,19 +58,11 @@ public class UserAgent extends Agent
         //Ens posem a nosaltres com a emissor
         msg.setSender(getAID());
         //Indiquem el contingut (String sense estructura)
-        msg.setContent("I am USER");
+        msg.setContent("I am CLASSIFIER");
 
         QueryInitiator bh1 = new QueryInitiator(this, msg);
         addBehaviour(bh1);
-    }
 
-    protected void readDataset()
-    {
-        DataSource source = new DataSource("data.arff");
-        Instances data = source.getDataSet();
-        if (data.classIndex() == -1) {
-            data.setClassIndex(data.numAttributes() - 1);
-        }
     }
 }
 

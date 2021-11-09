@@ -13,6 +13,10 @@
             <id>tilab</id>
             <url>https://jade.tilab.com/maven/</url>
         </repository>
+        <repository>
+            <id>weka</id>
+            <url>https://mvnrepository.com/</url>
+        </repository>
     </repositories>
 
     <build>
@@ -62,7 +66,19 @@
                             <arguments>
                                 <argument>-gui</argument>
                                 <argument>-agents</argument>
-                                <argument>user:urv.imas.agents.UserAgent</argument>
+                                <argument>  coordinator:urv.imas.agents.CoordinatorAgent;
+                                            user:urv.imas.agents.UserAgent;
+                                            classifier0:urv.imas.agents.ClassifierAgent;
+                                            classifier1:urv.imas.agents.ClassifierAgent;
+                                            classifier2:urv.imas.agents.ClassifierAgent;
+                                            classifier3:urv.imas.agents.ClassifierAgent;
+                                            classifier4:urv.imas.agents.ClassifierAgent;
+                                            classifier5:urv.imas.agents.ClassifierAgent;
+                                            classifier6:urv.imas.agents.ClassifierAgent;
+                                            classifier7:urv.imas.agents.ClassifierAgent;
+                                            classifier8:urv.imas.agents.ClassifierAgent;
+                                            classifier9:urv.imas.agents.ClassifierAgent;
+                                </argument>
                             </arguments>
                         </configuration>
                     </plugin>
@@ -72,7 +88,6 @@
     </profiles>
 
 
-
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
@@ -80,6 +95,11 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>nz.ac.waikato.cms.weka</groupId>
+            <artifactId>weka-stable</artifactId>
+            <version>3.8.0</version>
+        </dependency>
         <dependency>
             <groupId>com.tilab.jade</groupId>
             <artifactId>jade</artifactId>
@@ -99,6 +119,11 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.32</version>
+        </dependency>
+        <dependency>
+            <groupId>nz.ac.waikato.cms.weka</groupId>
+            <artifactId>weka-stable</artifactId>
+            <version>3.8.5</version>
         </dependency>
     </dependencies>
 
