@@ -12,6 +12,8 @@ import jade.domain.FIPANames;
 import java.util.Date;
 import java.util.Vector;
 import java.util.Enumeration;
+
+import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 
 /**
@@ -66,15 +68,20 @@ public class UserAgent extends Agent
 
         QueryInitiator bh1 = new QueryInitiator(this, msg);
         addBehaviour(bh1);
+        readDataset();
     }
 
     protected void readDataset()
     {
-        DataSource source = new DataSource("data.arff");
-        Instances data = source.getDataSet();
-        if (data.classIndex() == -1) {
-            data.setClassIndex(data.numAttributes() - 1);
-        }
+        try {
+            showMessage("Reading dataset...");
+            DataSource source = new DataSource("./src/main/resources/audit_risk.arff");
+            Instances data = source.getDataSet();
+            if (data.classIndex() == -1) {
+                data.setClassIndex(data.numAttributes() - 1);
+            }
+            showMessage(data.toSummaryString());
+        }catch(Exception e){showMessage(e.getMessage());}
     }
 }
 
