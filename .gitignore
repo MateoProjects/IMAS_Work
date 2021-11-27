@@ -97,3 +97,10 @@ fabric.properties
 
 # Android studio 3.1+ serialized cache file
 .idea/caches/build_file_checksums.ser
+
+
+################ Project folder ignores ################
+IMAS_WORK_T01/.idea
+IMAS_WORK_T01/target
+IMAS_WORK_T01/APDescription.txt
+IMAS_WORK_T01/MTPs-MainContainer.txt

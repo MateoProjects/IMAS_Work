@@ -1,0 +1,9 @@
+<settings>
+    <num_classifiers>10</num_classifiers>
+    <dataset_filename>audit_risk.arff</dataset_filename>
+    <num_training_instances>225</num_training_instances>
+    <num_training_attributes>6</num_training_attributes>
+    <num_validation_instances>75</num_validation_instances>
+    <num_test_instances>50</num_test_instances>
+    <num_test_attributes>20</num_test_attributes>
+</settings>
