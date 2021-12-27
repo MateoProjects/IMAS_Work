@@ -15,27 +15,51 @@ import weka.core.*;
 
 
 
-   /** Inner class QueryInitiator.
-     * This class implements the behaviour used by the ClassifierAgent to send a
-     * REQUEST message to the CoordinatorAgent.
-     * @author Anna Garriga Ramon Mateo
-     * @version  $Date: 2010-04-08 13:08:55 +0200 (gio, 08 apr 2010) $ $Revision: 6297 $
-     * */
+/** Inner class QueryInitiator.
+ * This class implements the behaviour used by the ClassifierAgent to send a
+ * REQUEST message to the CoordinatorAgent.
+ * @author Anna Garriga Ramon Mateo
+ * @version  $Date: 2010-04-08 13:08:55 +0200 (gio, 08 apr 2010) $ $Revision: 6297 $
+ * */
 public class ClassifierAgent extends Agent
 {
     private String CoordName = "coordinator";
     private AID CoordinatorAID;
     private String trainingData;
-    Classifier classifier = null;
-    Evaluation eval = null;
+    protected Classifier classifier = null;
+    protected Evaluation eval = null;
 
 
+    ///////////////////////////////////////////////////////////////// Auxiliar methods /////////////////////////////////////////////////////////////////
     public void showMessage(String mss) {
         System.out.println(getLocalName()+" -> "+mss);
     }
 
 
-    
+    ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
+    /**
+     * This method is automatically called when the agent is launched.
+     * It initiates the conversation with the CoordinatorAgent.
+     */
+    protected void setup() {
+        // Read name of classifiers as arguments (NOT ACTIVE NOW)
+        Object[] args = getArguments();
+        if (args != null && args.length > 0) {} else{}
+
+        CoordinatorAID = new AID((String) CoordName, AID.ISLOCALNAME);
+
+        // Create missage for the coordinator
+        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+        msg.addReceiver(CoordinatorAID);
+        msg.setSender(getAID());
+        msg.setContent("I am CLASSIFIER");
+
+        QueryInitiator bh1 = new QueryInitiator(this, msg);
+        addBehaviour(bh1);
+    }
+
+
+    ///////////////////////////////////////////////////////////////// Working behaviour /////////////////////////////////////////////////////////////////
     class QueryInitiator extends AchieveREInitiator
     {
         /**
@@ -53,99 +77,74 @@ public class ClassifierAgent extends Agent
             showMessage("'" + msg.getSender().getLocalName()+"' sent: \""+msg.getContent()+"\"");
             // receive ACL message from the coordinator to train dataset and dataset from cordinator
             String[] content = msg.getContent().split(" ");
-            // 
-            switch (msg.getContent()) {
-                
+
+            ACLMessage reply;
+            switch (msg.getContent()){
                 case "train":
                     ACLMessage trainingData = blockingReceive();
-                    this.classifier = createClassifier(trainingData.getContent());
+                    /*classifier = createClassifier(trainingData.getContent());   // TODO: Solventar aixó, perquè segur que peta aqui
                     // retrun accuracy of classifier
-                    this.eval = new Evaluation(trainingData.getContent());
+                    eval = new Evaluation(trainingData.getContent());
                     // evaluem el model
-                    double prediction = this.eval.evaluateModel(this.classifier, trainingData.getContent());
+                    double prediction = eval.evaluateModel(classifier, trainingData.getContent());
                     // send prediction to coordinator agent
-                    ACLMessage reply = msg.createReply();
+                    reply = msg.createReply();
                     reply.setPerformative(ACLMessage.INFORM);
                     reply.setContent(Double.toString(prediction));
-                    send(reply);
+                    send(reply);*/
 
                     break;
             
                 case "classify":
                     ACLMessage classificationData = blockingReceive();
-                    double result = classifyInstance(classificationData.getContent()); // segur que peta aqui
-                    ACLMessage reply = msg.createReply();
+                    /*double result = classifyInstance(classificationData.getContent()); // TODO: Solventar aixó, perquè segur que peta aqui
+                    reply = msg.createReply();
                     reply.setPerformative(ACLMessage.INFORM);
                     reply.setContent(Double.toString(result));
-                    send(reply);
+                    send(reply);*/
                     break;
                 
                 case "getAtributes":
-                    ACLMessage reply = msg.createReply();
+                    reply = msg.createReply();
                     reply.setPerformative(ACLMessage.INFORM);
-                    reply.setContent(get_infoClassifier());
+                    //reply.setContent(get_infoClassifier());
                     send(reply);
                     break;
 
                 case "globalInfo":
-                    ACLMessage reply = msg.createReply();
+                    reply = msg.createReply();
                     reply.setPerformative(ACLMessage.INFORM);
-                    reply.setContent(this.classifier.get_globalInfo());
+                    //reply.setContent(classifier.get_globalInfo());
                     send(reply);
                     break;
 
                 case "getGraph":
-                    ACLMessage reply = msg.createReply();
+                    reply = msg.createReply();
                     reply.setPerformative(ACLMessage.INFORM);
-                    reply.setContent(this.classifier.graph());
+                    //reply.setContent(classifier.graph());
                     send(reply);
                     break;
 
-                case default:
+                default:    // TODO?
                     break;
             }
     
         }
 
     }
-    /**
-     * This method is automatically called when the agent is launched.
-     * It initiates the conversation with the CoordinatorAgent.
-     */
-    protected void setup() {
-        // Read name of classifiers as arguments (NOT ACTIVE NOW)
-        Object[] args = getArguments();
-        if (args != null && args.length > 0) {}else{}
 
-        CoordinatorAID = new AID((String) CoordName, AID.ISLOCALNAME);
-
-        //Instanciació del missatge
-        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-        //Afegim un receptor (suposem que el seu AID ja l’havíem trobat abans
-        msg.addReceiver(CoordinatorAID);
-        //Ens posem a nosaltres com a emissor
-        msg.setSender(getAID());
-        //Indiquem el contingut (String sense estructura)
-        msg.setContent("I am CLASSIFIER");
-
-        QueryInitiator bh1 = new QueryInitiator(this, msg);
-        addBehaviour(bh1);
-
-    }
-    
     /**
      * This method create a weka J48 classifier and train it with the training data.
      * @param trainingData The training data.
      * @return The J48 classifier.
      */
-    
-    public weka.classifiers.Classifier createClassifier(String trainingData) {
+    public Classifier createClassifier(String trainingData) {
         Classifier classifier = null;
         try {
             // Create the classifier
-            classifier = new classifiers.trees.J48();
+            classifier = new weka.classifiers.trees.J48();
             // Train the classifier
-            classifier.buildClassifier(new core.Instances(trainingData));
+            //classifier.buildClassifier(new Instances(trainingData));    // TODO: It is not possible to create Instances from String
         } catch (Exception e) {
             System.err.println("Error creating classifier: " + e.getMessage());
         }
@@ -157,18 +156,24 @@ public class ClassifierAgent extends Agent
      * @param instance intance to classify and predict
      * @return The predicted class.
      */
+    public double classifyInstance(Instance instance) {
+        double val = -1;
+        try{
+            val = this.classifier.classifyInstance(instance);
+        }catch (Exception e){
+            showMessage("ERROR while classifying intance: "+instance);
+        }
 
-    public classifyInstance(Instances instance) {
-        return this.classifier.classifyInstance(instance);
+        return val;
     }
 
     /**
      * Get info about classifier
      * return String with info about classifier
      */
-    public String get_infoClassifier() {
-        return classifier.get_info();
-    }
+    /*public String get_infoClassifier() {
+        return classifier.get_info();   // TODO: get_info method does not exist
+    }*/
         
 }
 

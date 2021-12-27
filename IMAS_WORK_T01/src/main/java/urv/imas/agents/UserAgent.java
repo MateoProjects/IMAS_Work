@@ -33,6 +33,7 @@ public class UserAgent extends Agent
 
     // Settings
     private String DatasetFileName;
+    private int NumClassifiers;
     private int NumTrainingInstances;
     private int NumValidationInstances;
     private int NumTestInstances;
@@ -57,30 +58,31 @@ public class UserAgent extends Agent
         readArguments();
 
         // Read settings XML file
+        showMessage("Reading settings");
         readSettings();
 
         // Read dataset specified
+        showMessage("Reading dataset");
         readDataset();
+        //showMessage("Dataset:\n"+Dataset.toSummaryString());    // TODO: Check if print train/test sets sizes
 
-        // Start comunication with coordinator
+        // Start comunication with coordinator (initializaiton behaviour)
+        showMessage("Initializing coordinator");
         CoordinatorAID = new AID((String) CoordName, AID.ISLOCALNAME);
-        ACLMessage msg = new ACLMessage(ACLMessage.INFORM); //Instanciació del missatge
-        msg.addReceiver(CoordinatorAID);    //Afegim un receptor (suposem que el seu AID ja l’havíem trobat abans
-        msg.setSender(getAID());    //Ens posem a nosaltres com a emissor
-        msg.setContent("I am USER");    //Indiquem el contingut (String sense estructura)
-
-        // Create initializaiton behaviour
+        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+        msg.addReceiver( CoordinatorAID );
+        msg.setSender(getAID());
+        msg.setContent("I am USER. Create "+NumClassifiers+" classifiers");
         QueryInitiator bh1 = new QueryInitiator(this, msg);
         addBehaviour(bh1);
     }
 
     protected void readArguments(){
         Object[] args = getArguments();
-        if (args != null && args.length > 0) {} else{}  // TODO
+        if (args != null && args.length > 0) {} else{}  // TODO: Maybe read XML settings filepath (otherwise remove this method)
     }
 
     protected void readSettings(){
-        showMessage("Reading settings...");
         File file = new File(ResourcesFolderPath+"/"+SettingsFileName);
         try {
             DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -88,15 +90,17 @@ public class UserAgent extends Agent
             Document document = documentBuilder.parse(file);
 
             DatasetFileName = document.getElementsByTagName("dataset_filename").item(0).getTextContent();
+            NumClassifiers = Integer.parseInt(document.getElementsByTagName("num_classifiers").item(0).getTextContent());
             NumTrainingInstances = Integer.parseInt(document.getElementsByTagName("num_training_instances").item(0).getTextContent());
             NumValidationInstances = Integer.parseInt(document.getElementsByTagName("num_validation_instances").item(0).getTextContent());
             NumTestInstances = Integer.parseInt(document.getElementsByTagName("num_test_instances").item(0).getTextContent());
             NumTestAttributes = Integer.parseInt(document.getElementsByTagName("num_training_attributes").item(0).getTextContent());
-        }catch(Exception e){showMessage(e.getMessage());}
+        }catch(Exception e){
+            showMessage("ERROR while reading settings:\n" + e.getMessage());
+        }
     }
 
     protected void readDataset(){
-        showMessage("Reading dataset...");
         try {
             // Read dataset
             DataSource source = new DataSource(ResourcesFolderPath+"/"+DatasetFileName);
@@ -104,7 +108,6 @@ public class UserAgent extends Agent
             if (Dataset.classIndex() == -1) {   // Set class index
                 Dataset.setClassIndex(Dataset.numAttributes() - 1);
             }
-            showMessage(Dataset.toSummaryString());
 
             // Split dataset (https://www.programcreek.com/java-api-examples/?api=weka.filters.Filter Example 3)
             int iniIdx = 0;
@@ -116,7 +119,9 @@ public class UserAgent extends Agent
             iniIdx = endIdx;
             endIdx += NumTestInstances;
             TestDataset = new Instances(Dataset, iniIdx, endIdx);
-        }catch(Exception e){showMessage(e.getMessage());}
+        }catch(Exception e){
+            showMessage("ERROR while reading dataset:\n" + e.getMessage());
+        }
     }
 
     // Initialization behaviour
@@ -132,6 +137,10 @@ public class UserAgent extends Agent
             showMessage("'" + msg.getSender().getLocalName()+"' sent: \""+msg.getContent()+"\"");
         }
     }
+
+    ///////////////////////////////////////////////////////////////// Working behaviour /////////////////////////////////////////////////////////////////
+    // TODO: Train
+    // TODO: Test
 }
 
 

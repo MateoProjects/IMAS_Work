@@ -68,58 +68,48 @@
                                 <argument>-agents</argument>
                                 <argument>  coordinator:urv.imas.agents.CoordinatorAgent;
                                             user:urv.imas.agents.UserAgent;
-                                            classifier0:urv.imas.agents.ClassifierAgent;
-                                            classifier1:urv.imas.agents.ClassifierAgent;
-                                            classifier2:urv.imas.agents.ClassifierAgent;
-                                            classifier3:urv.imas.agents.ClassifierAgent;
-                                            classifier4:urv.imas.agents.ClassifierAgent;
-                                            classifier5:urv.imas.agents.ClassifierAgent;
-                                            classifier6:urv.imas.agents.ClassifierAgent;
-                                            classifier7:urv.imas.agents.ClassifierAgent;
-                                            classifier8:urv.imas.agents.ClassifierAgent;
-                                            classifier9:urv.imas.agents.ClassifierAgent;
-                                </argument>
-                            </arguments>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
+                        </argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</profile>
+</profiles>
 
 
-    <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+<properties>
+<maven.compiler.source>8</maven.compiler.source>
+<maven.compiler.target>8</maven.compiler.target>
+<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+</properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.tilab.jade</groupId>
-            <artifactId>jade</artifactId>
-            <version>4.5.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.tilab.jade</groupId>
-            <artifactId>jade-test-suite</artifactId>
-            <version>1.13.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.32</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>1.7.32</version>
-        </dependency>
-        <dependency>
-            <groupId>nz.ac.waikato.cms.weka</groupId>
-            <artifactId>weka-stable</artifactId>
-            <version>3.8.5</version>
-        </dependency>
-    </dependencies>
+<dependencies>
+<dependency>
+    <groupId>com.tilab.jade</groupId>
+    <artifactId>jade</artifactId>
+    <version>4.5.0</version>
+</dependency>
+<dependency>
+    <groupId>com.tilab.jade</groupId>
+    <artifactId>jade-test-suite</artifactId>
+    <version>1.13.0</version>
+</dependency>
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-api</artifactId>
+    <version>1.7.32</version>
+</dependency>
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-simple</artifactId>
+    <version>1.7.32</version>
+</dependency>
+<dependency>
+    <groupId>nz.ac.waikato.cms.weka</groupId>
+    <artifactId>weka-stable</artifactId>
+    <version>3.8.5</version>
+</dependency>
+</dependencies>
 
 </project>
