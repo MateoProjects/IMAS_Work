@@ -1,9 +1,1 @@
-urv\imas\agents\CoordinatorAgent$QueryResponder.class
-urv\imas\utils\OurMessage.class
-urv\imas\agents\CoordinatorAgent.class
-urv\imas\agents\UserAgent$TrainingInitiator.class
-urv\imas\agents\CoordinatorAgent$CNResponder.class
-urv\imas\agents\UserAgent.class
-urv\imas\agents\UserAgent$QueryInitiator.class
-urv\imas\agents\ClassifierAgent$QueryInitiator.class
-urv\imas\agents\ClassifierAgent.class
+urv/imas/utils/OurMessage.class

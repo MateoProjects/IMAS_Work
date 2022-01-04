@@ -12,14 +12,13 @@ import jade.domain.FIPANames;
 import jade.proto.ContractNetResponder;
 import jade.wrapper.AgentController;
 import urv.imas.utils.OurMessage;
+import weka.core.Attribute;
+import weka.core.Instance;
 import weka.core.Instances;
 
-import java.util.Date;
-import java.util.Vector;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.LinkedList;
-import java.util.ArrayList;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 
 /**
@@ -40,10 +39,16 @@ public class CoordinatorAgent extends Agent
     private int NumTrainingInstancesPerClassifier;
     private int NumValidationInstancesPerClassifier;
     private int NumAttributesPerClassifier;
+    private int NumAttributesDataset;
 
     private List <AID> classifiersAIDs;
     private Instances TrainDataset;
     private Instances TestDataset;
+    private List<Attribute> [] classifiersAttributes;
+    private List<Integer> [] classifiersAttributesInteger;
+    private Instances [] classifiersInstances;
+
+
 
 
     ///////////////////////////////////////////////////////////////// Auxiliar methods /////////////////////////////////////////////////////////////////
@@ -151,6 +156,7 @@ public class CoordinatorAgent extends Agent
                 // TODO: arguments[1] = attributes Compute attributes to use by this classifier and add to arguments
                 agentController = containerController.createNewAgent(classifierName, className, arguments);
                 agentController.start();
+
             }
         }catch (Exception e){
             showMessage("ERROR while creating classifier "+classifierName+"\n"+e.getMessage());
@@ -198,7 +204,63 @@ public class CoordinatorAgent extends Agent
     protected void train(Instances dataset){
         showMessage("Starting train");
         TrainDataset = dataset;
-        showMessage(dataset.instance(0).toString());
+        //BE CAREFUL WITH -1, IF WE REMOVE THE CLASS LATER WE SHOULD REMOVE IT HERE TOO
+        NumAttributesDataset = dataset.numAttributes()-1;
+
+        Random random = new Random(42);
+        classifiersAttributes = new List[NumClassifiers];
+        classifiersAttributesInteger = new List[NumClassifiers];
+        classifiersInstances = new Instances[NumClassifiers];
+
+        List<Attribute> attributes = Collections.list(dataset.enumerateAttributes());
+        List<Integer> attributesIndexes = IntStream.range(0, NumAttributesDataset).boxed().collect(Collectors.toList());
+        List<Integer> attributesIndexesOriginal = IntStream.range(0, dataset.numAttributes()).boxed().collect(Collectors.toList());
+
+        Collections.shuffle(attributesIndexes);
+        int assigned = 0;
+        int start = 0;
+        int end = NumAttributesPerClassifier;
+
+        // SELECT INDICES IN A WAY THAT EVERY ONE IS SELECTED AT LEAST ONCE. THEN IS RANDOM
+        for(int c=0; c < NumClassifiers; c++) {
+            if (start == attributes.size() - 1) {
+                Collections.shuffle(attributesIndexes);
+                classifiersAttributesInteger[c] = attributesIndexes.subList(0, NumAttributesPerClassifier);
+            } else {
+                classifiersAttributesInteger[c] = attributesIndexes.subList(start, end);
+                start += NumAttributesPerClassifier;
+                end += NumAttributesPerClassifier;
+                if (start != attributes.size() - 1 && end >= attributes.size()) {
+                    end = attributes.size() - 1;
+                    start = end - NumAttributesPerClassifier;
+                }
+            }
+
+            classifiersAttributes[c] = classifiersAttributesInteger[c].stream().map(attributes::get).collect(Collectors.toList());
+
+            dataset.randomize(random);
+            classifiersInstances[c] = new Instances(dataset, 0, NumInstancesPerClassifier);
+            classifiersInstances[c] = deleteAttributes(classifiersInstances[c],classifiersAttributesInteger[c]);
+        }
+
+
+
+    }
+
+    private Instances deleteAttributes(Instances classifiersInstances,List<Integer> classifierAttributes)
+    {
+        int deleted = 0;
+        int total = NumAttributesDataset;
+        for (int i  = 0; i < total; i++)
+        {
+            if (!classifierAttributes.contains(i))
+            {
+                classifiersInstances.deleteAttributeAt(i-deleted);
+                deleted += 1;
+            }
+        }
+        //nonSelectedAttributes.forEach(classifiersInstances::deleteAttributeAt);
+        return classifiersInstances;
     }
 
     protected ArrayList<Integer> test(Instances dataset){
