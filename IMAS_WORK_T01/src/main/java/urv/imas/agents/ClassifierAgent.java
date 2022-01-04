@@ -3,6 +3,8 @@ package urv.imas.agents;
 import jade.core.Agent;
 import jade.core.AID;
 import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
+import jade.lang.acl.UnreadableException;
 import jade.proto.AchieveREInitiator;
 import jade.proto.ContractNetInitiator;
 import jade.domain.FIPANames;
@@ -10,6 +12,9 @@ import jade.domain.FIPANames;
 import java.util.Date;
 import java.util.Vector;
 import java.util.Enumeration;
+
+import jade.proto.ContractNetResponder;
+import urv.imas.utils.OurMessage;
 import weka.classifiers.*;
 import weka.core.*;
 
@@ -56,6 +61,8 @@ public class ClassifierAgent extends Agent
 
         QueryInitiator bh1 = new QueryInitiator(this, msg);
         addBehaviour(bh1);
+
+        addBehaviour(new CNResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST)));
 
     }
 
@@ -182,7 +189,43 @@ public class ClassifierAgent extends Agent
     /*public String get_infoClassifier() {
         return classifier.get_info();   // TODO: get_info method does not exist
     }*/
-        
+
+
+    class CNResponder extends ContractNetResponder {
+        public CNResponder (Agent myAgent, MessageTemplate mt)
+        {
+            super(myAgent, mt);
+        }
+        protected ACLMessage prepareResponse (ACLMessage msg) {
+            if (msg != null) {
+                try {
+                    OurMessage content = (OurMessage) msg.getContentObject();
+                    String type = content.name;
+                    Instances dataset = (Instances)content.obj;
+
+                    // Start training or test
+                    if (type.equals("train")){
+                        //TODO implement training
+                    }
+                    else if (type.equals("test")){
+                        //TODO implement testing
+                    }
+
+                } catch (UnreadableException e) {
+                    e.printStackTrace();
+                    showMessage("Could not read message");
+                }
+            }else{
+                showMessage("Message was empty!");
+            }
+            ACLMessage reply = msg.createReply();
+            reply.setPerformative(ACLMessage.INFORM);
+            reply.setContent("Dataset received.");
+            return reply;
+        }
+    }
+
+
 }
 
 

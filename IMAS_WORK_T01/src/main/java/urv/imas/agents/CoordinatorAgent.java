@@ -201,7 +201,38 @@ public class CoordinatorAgent extends Agent
         }
     }
 
+    class TrainingInitiator extends ContractNetInitiator{
+        private String startMsg;
+        public TrainingInitiator(Agent myAgent, ACLMessage CfpMsg, String startMsg)
+        {
+            super(myAgent, CfpMsg);
+            this.startMsg = startMsg;
+        }
+
+        @Override
+        public void onStart() {
+            super.onStart();
+            showMessage(startMsg);
+        }
+
+        protected void handleNotUnderstood (ACLMessage msg) {
+            showMessage(msg.getSender().getLocalName()+" did not understand the message");
+        }
+        protected void handleRefuse (ACLMessage msg) {
+            showMessage(msg.getSender().getLocalName()+" refused the message");
+        }
+        protected void handleInform (ACLMessage msg) {
+            showMessage(msg.getSender().getLocalName()+" informs: " + msg.getContent());
+        }
+        protected void handleFailure (ACLMessage msg) {
+            showMessage(msg.getSender().getLocalName()+" failed");
+        }
+    }
+
     protected void train(Instances dataset){
+        // Create the sequential behaviour for the agent life
+        ParallelBehaviour pb = new ParallelBehaviour();
+
         showMessage("Starting train");
         TrainDataset = dataset;
         //BE CAREFUL WITH -1, IF WE REMOVE THE CLASS LATER WE SHOULD REMOVE IT HERE TOO
@@ -217,7 +248,6 @@ public class CoordinatorAgent extends Agent
         List<Integer> attributesIndexesOriginal = IntStream.range(0, dataset.numAttributes()).boxed().collect(Collectors.toList());
 
         Collections.shuffle(attributesIndexes);
-        int assigned = 0;
         int start = 0;
         int end = NumAttributesPerClassifier;
 
@@ -235,16 +265,27 @@ public class CoordinatorAgent extends Agent
                     start = end - NumAttributesPerClassifier;
                 }
             }
-
             classifiersAttributes[c] = classifiersAttributesInteger[c].stream().map(attributes::get).collect(Collectors.toList());
 
             dataset.randomize(random);
             classifiersInstances[c] = new Instances(dataset, 0, NumInstancesPerClassifier);
             classifiersInstances[c] = deleteAttributes(classifiersInstances[c],classifiersAttributesInteger[c]);
+
+            // Send training to classifier
+            ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+            msg.addReceiver (classifiersAIDs.get(c));
+            OurMessage content = new OurMessage("train",  classifiersInstances[c]);
+            try
+            {
+                msg.setContentObject(content);
+                msg.setLanguage("JavaSerialization");
+            } catch(Exception e){
+                showMessage("ERROR while creating dataset message:\n" + e.getMessage());
+            }
+            ACLMessage trainDatasetMsg = msg;
+            pb.addSubBehaviour(new TrainingInitiator(this, trainDatasetMsg, "Initializing training phase in classifier " + c));
         }
-
-
-
+        addBehaviour(pb);
     }
 
     private Instances deleteAttributes(Instances classifiersInstances,List<Integer> classifierAttributes)
@@ -259,7 +300,6 @@ public class CoordinatorAgent extends Agent
                 deleted += 1;
             }
         }
-        //nonSelectedAttributes.forEach(classifiersInstances::deleteAttributeAt);
         return classifiersInstances;
     }
 
