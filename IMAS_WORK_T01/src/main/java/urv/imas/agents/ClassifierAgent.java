@@ -153,7 +153,7 @@ public class ClassifierAgent extends Agent
 
     /**
      * Classify the given instance.
-     * @param instance intance to classify and predict
+     * @param instance instance to classify and predict
      * @return The predicted class.
      */
     public double classifyInstance(Instance instance) {
@@ -161,7 +161,7 @@ public class ClassifierAgent extends Agent
         try{
             val = this.classifier.classifyInstance(instance);
         }catch (Exception e){
-            showMessage("ERROR while classifying intance: "+instance);
+            showMessage("ERROR while classifying instance: "+instance);
         }
 
         return val;
