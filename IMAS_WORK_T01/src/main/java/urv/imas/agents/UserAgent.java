@@ -7,13 +7,14 @@ import jade.lang.acl.ACLMessage;
 import jade.proto.AchieveREInitiator;
 
 import jade.proto.ContractNetInitiator;
-import urv.imas.utils.OurDataset;
+import urv.imas.utils.OurMessage;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 
 import javax.xml.parsers.*;
 import java.io.File;
 import org.w3c.dom.*;
+import java.util.Random;
 
 
 /**
@@ -31,15 +32,17 @@ public class UserAgent extends Agent
     private String DatasetFileName;
     private int NumClassifiers;
     private int NumTrainingInstances;
-    private int NumValidationInstances;
     private int NumTestInstances;
     private int NumTestAttributes;
+    private int NumInstancesPerClassifier;
+    private int NumTrainingInstancesPerClassifier;
+    private int NumValidationInstancesPerClassifier;
+    private int NumAttributesPerClassifier;
 
     // Variables
     private AID CoordinatorAID;
     private Instances Dataset;
     private Instances TrainDataset;
-    private Instances ValidationDataset;
     private Instances TestDataset;
 
 
@@ -47,6 +50,7 @@ public class UserAgent extends Agent
     public void showMessage(String mss) {
         System.out.println(getLocalName()+" -> "+mss);
     }
+
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
     protected void setup() {
@@ -61,9 +65,7 @@ public class UserAgent extends Agent
         showMessage("Reading dataset");
         readDataset();
 
-        //showMessage("Dataset:\n"+Dataset.toSummaryString());    // TODO: Check if print train/test sets sizes
-
-        // Create the sequential behaviour
+        // Create the sequential behaviour for the agent life
         SequentialBehaviour sb = new SequentialBehaviour();
 
         // Start comunication with coordinator (initialization behaviour)
@@ -76,18 +78,7 @@ public class UserAgent extends Agent
 
         // Add the sequential behaviour
         addBehaviour(sb);
-
     }
-
-    private ACLMessage initCoordinatorMsg() {
-        CoordinatorAID = new AID((String) CoordName, AID.ISLOCALNAME);
-        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-        msg.addReceiver( CoordinatorAID );
-        msg.setSender(getAID());
-        msg.setContent("I am USER. Create "+NumClassifiers+" classifiers");
-        return msg;
-    }
-
 
     protected void readArguments(){
         Object[] args = getArguments();
@@ -101,12 +92,15 @@ public class UserAgent extends Agent
             DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
             Document document = documentBuilder.parse(file);
 
-            DatasetFileName = document.getElementsByTagName("dataset_filename").item(0).getTextContent();
             NumClassifiers = Integer.parseInt(document.getElementsByTagName("num_classifiers").item(0).getTextContent());
+            DatasetFileName = document.getElementsByTagName("dataset_filename").item(0).getTextContent();
             NumTrainingInstances = Integer.parseInt(document.getElementsByTagName("num_training_instances").item(0).getTextContent());
-            NumValidationInstances = Integer.parseInt(document.getElementsByTagName("num_validation_instances").item(0).getTextContent());
             NumTestInstances = Integer.parseInt(document.getElementsByTagName("num_test_instances").item(0).getTextContent());
-            NumTestAttributes = Integer.parseInt(document.getElementsByTagName("num_training_attributes").item(0).getTextContent());
+            NumTestAttributes = Integer.parseInt(document.getElementsByTagName("num_test_attributes").item(0).getTextContent());
+            NumInstancesPerClassifier = Integer.parseInt(document.getElementsByTagName("num_instances_per_classifier").item(0).getTextContent());
+            NumTrainingInstancesPerClassifier = Integer.parseInt(document.getElementsByTagName("num_training_instances_per_classifier").item(0).getTextContent());
+            NumValidationInstancesPerClassifier = Integer.parseInt(document.getElementsByTagName("num_validation_instances_per_classifier").item(0).getTextContent());
+            NumAttributesPerClassifier = Integer.parseInt(document.getElementsByTagName("num_training_attributes_per_classifier").item(0).getTextContent());
         }catch(Exception e){
             showMessage("ERROR while reading settings:\n" + e.getMessage());
         }
@@ -117,44 +111,43 @@ public class UserAgent extends Agent
             // Read dataset
             DataSource source = new DataSource(ResourcesFolderPath+"/"+DatasetFileName);
             Dataset = source.getDataSet();
-            if (Dataset.classIndex() == -1) {   // Set class index
-                Dataset.setClassIndex(Dataset.numAttributes() - 1);
-            }
 
-            // Split dataset (https://www.programcreek.com/java-api-examples/?api=weka.filters.Filter Example 3)
+            // Randomize
+            Random rnd = Dataset.getRandomNumberGenerator(42);
+            Dataset.randomize(rnd);
+
+            // Split into training and test (https://www.programcreek.com/java-api-examples/?api=weka.filters.Filter Example 3)
             int iniIdx = 0;
-            int endIdx = NumTrainingInstances;
-            TrainDataset = new Instances(Dataset, iniIdx, endIdx);
-            iniIdx = endIdx;
-            endIdx += NumValidationInstances;
-            ValidationDataset = new Instances(Dataset, iniIdx, endIdx);
-            iniIdx = endIdx;
-            endIdx += NumTestInstances;
-            TestDataset = new Instances(Dataset, iniIdx, endIdx);
+            int amount = NumTrainingInstances;
+            TrainDataset = new Instances(Dataset, iniIdx, amount);
+            iniIdx = iniIdx + amount;
+            amount = NumTestInstances;
+            TestDataset = new Instances(Dataset, iniIdx, amount);
         }catch(Exception e){
             showMessage("ERROR while reading dataset:\n" + e.getMessage());
         }
     }
 
+    private ACLMessage initCoordinatorMsg() {
+        CoordinatorAID = new AID((String) CoordName, AID.ISLOCALNAME);
+        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+        msg.addReceiver( CoordinatorAID );
+        msg.setSender(getAID());
 
-    protected ACLMessage createDatasetMessage(String type, Instances dataset){
-        ACLMessage msg = new ACLMessage();
-        msg.addReceiver (CoordinatorAID);
-        msg.setPerformative(ACLMessage.REQUEST);
-        OurDataset ourDataset = new OurDataset(type,dataset);
-        try
-        {
-            msg.setContentObject(ourDataset);
-            msg.setLanguage("JavaSerialization");
-        } catch(Exception e){
-        showMessage("ERROR while creating dataset message:\n" + e.getMessage());
+        int[] settings = new int[]{NumClassifiers, NumInstancesPerClassifier, NumTrainingInstancesPerClassifier,
+                NumValidationInstancesPerClassifier, NumAttributesPerClassifier};
+        OurMessage content = new OurMessage("ini", settings);
+        try{
+            msg.setContentObject(content);
+        }catch(java.io.IOException e){
+            showMessage("ERROR while initializing coordinator: "+e.getMessage());
         }
+
         return msg;
     }
 
     // Initialization behaviour
-    class QueryInitiator extends AchieveREInitiator
-    {
+    class QueryInitiator extends AchieveREInitiator{
         private String startMsg;
         public QueryInitiator (Agent myAgent, ACLMessage msg, String startMsg)
         {
@@ -176,9 +169,9 @@ public class UserAgent extends Agent
 
     }
 
-    // Training behaviour
-    class TrainingInitiator extends ContractNetInitiator
-    {
+
+    ///////////////////////////////////////////////////////////////// Training /////////////////////////////////////////////////////////////////
+    class TrainingInitiator extends ContractNetInitiator{
         private String startMsg;
         public TrainingInitiator(Agent myAgent, ACLMessage CfpMsg, String startMsg)
         {
@@ -206,10 +199,24 @@ public class UserAgent extends Agent
         }
     }
 
+    protected ACLMessage createDatasetMessage(String type, Instances dataset){
+        ACLMessage msg = new ACLMessage();
+        msg.addReceiver (CoordinatorAID);
+        msg.setPerformative(ACLMessage.REQUEST);
+        OurMessage content = new OurMessage(type, dataset);
+        try
+        {
+            msg.setContentObject(content);
+            msg.setLanguage("JavaSerialization");
+        } catch(Exception e){
+            showMessage("ERROR while creating dataset message:\n" + e.getMessage());
+        }
+        return msg;
+    }
 
-    ///////////////////////////////////////////////////////////////// Working behaviour /////////////////////////////////////////////////////////////////
-    // TODO: Train
-    // TODO: Test
+
+    ///////////////////////////////////////////////////////////////// Test /////////////////////////////////////////////////////////////////
+    // TODO
 }
 
 
