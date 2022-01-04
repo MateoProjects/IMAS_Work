@@ -56,6 +56,7 @@ public class ClassifierAgent extends Agent
 
         QueryInitiator bh1 = new QueryInitiator(this, msg);
         addBehaviour(bh1);
+
     }
 
 
@@ -82,15 +83,19 @@ public class ClassifierAgent extends Agent
             switch (msg.getContent()){
                 case "train":
                     ACLMessage trainingData = blockingReceive();
-                    /*classifier = createClassifier(trainingData.getContent());   // TODO: Solventar aixó, perquè segur que peta aqui
+                    //TODO: Recieve training data: 300 instances
+                    //TODO: Split train and validation (225 and 75)
+                    /*classifier = createClassifier(trainingData);   // TODO: Solventar aixó, perquè segur que peta aqui
+
                     // retrun accuracy of classifier
-                    eval = new Evaluation(trainingData.getContent());
+                    eval = new Evaluation(validationData);
                     // evaluem el model
-                    double prediction = eval.evaluateModel(classifier, trainingData.getContent());
+                    double accuracy = eval.evaluateModel(classifier);
+
                     // send prediction to coordinator agent
                     reply = msg.createReply();
                     reply.setPerformative(ACLMessage.INFORM);
-                    reply.setContent(Double.toString(prediction));
+                    reply.setContent(Double.toString(accuracy));
                     send(reply);*/
 
                     break;
@@ -133,21 +138,24 @@ public class ClassifierAgent extends Agent
 
     }
 
+
     /**
      * This method create a weka J48 classifier and train it with the training data.
      * @param trainingData The training data.
      * @return The J48 classifier.
      */
-    public Classifier createClassifier(String trainingData) {
+    public Classifier createClassifier(Instance trainingData) {
         Classifier classifier = null;
+
         try {
             // Create the classifier
             classifier = new weka.classifiers.trees.J48();
             // Train the classifier
-            //classifier.buildClassifier(new Instances(trainingData));    // TODO: It is not possible to create Instances from String
+            //classifier.buildClassifier(trainingData);    // TODO: It is not possible to create Instances from String
         } catch (Exception e) {
             System.err.println("Error creating classifier: " + e.getMessage());
         }
+
         return classifier;
     }
 
