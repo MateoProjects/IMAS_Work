@@ -1,5 +1,7 @@
 package urv.imas.agents;
 
+import urv.imas.utils.*;
+
 import jade.core.Agent;
 import jade.core.AID;
 import jade.lang.acl.ACLMessage;
@@ -14,7 +16,6 @@ import java.util.Vector;
 import java.util.Enumeration;
 
 import jade.proto.ContractNetResponder;
-import urv.imas.utils.OurMessage;
 import weka.classifiers.*;
 import weka.core.*;
 
@@ -26,19 +27,13 @@ import weka.core.*;
  * @author Anna Garriga Ramon Mateo
  * @version  $Date: 2010-04-08 13:08:55 +0200 (gio, 08 apr 2010) $ $Revision: 6297 $
  * */
-public class ClassifierAgent extends Agent
+public class ClassifierAgent extends OurAgent
 {
     private String CoordName = "coordinator";
     private AID CoordinatorAID;
     private String trainingData;
     protected Classifier classifier = null;
     protected Evaluation eval = null;
-
-
-    ///////////////////////////////////////////////////////////////// Auxiliar methods /////////////////////////////////////////////////////////////////
-    public void showMessage(String mss) {
-        System.out.println(getLocalName()+" -> "+mss);
-    }
 
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////

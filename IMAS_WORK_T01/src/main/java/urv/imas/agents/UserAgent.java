@@ -1,5 +1,7 @@
 package urv.imas.agents;
 
+import urv.imas.utils.*;
+
 import jade.core.Agent;
 import jade.core.AID;
 import jade.core.behaviours.SequentialBehaviour;
@@ -21,7 +23,7 @@ import java.util.Random;
  * This agent implements a simple Uset Agent that loads settings, datasets and starts training and testing. *
  * @author Team 1
  */
-public class UserAgent extends Agent
+public class UserAgent extends OurAgent
 {
     // Predefined settings
     private static String ResourcesFolderPath = "./src/main/resources";
@@ -46,12 +48,6 @@ public class UserAgent extends Agent
     private Instances TestDataset;
 
 
-    ///////////////////////////////////////////////////////////////// Auxiliar methods /////////////////////////////////////////////////////////////////
-    public void showMessage(String mss) {
-        System.out.println(getLocalName()+" -> "+mss);
-    }
-
-
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
     protected void setup() {
         // Read creation arguments
@@ -70,11 +66,11 @@ public class UserAgent extends Agent
 
         // Start comunication with coordinator (initialization behaviour)
         ACLMessage msg = initCoordinatorMsg();
-        sb.addSubBehaviour(new QueryInitiator(this, msg, "Initializing coordinator"));
+        sb.addSubBehaviour(new OurRequestInitiator(this, msg, "Coordinator initialization phase"));
 
         // Send training dataset to coordinator
-        ACLMessage trainDatasetMsg = createDatasetMessage("train", TrainDataset);
-        sb.addSubBehaviour(new TrainingInitiator(this, trainDatasetMsg, "Initializing training phase"));
+        ACLMessage trainDatasetMsg = startTrainingOrTestMsg("train", TrainDataset);
+        sb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase"));
 
         // Add the sequential behaviour
         addBehaviour(sb);
@@ -146,60 +142,9 @@ public class UserAgent extends Agent
         return msg;
     }
 
-    // Initialization behaviour
-    class QueryInitiator extends AchieveREInitiator{
-        private String startMsg;
-        public QueryInitiator (Agent myAgent, ACLMessage msg, String startMsg)
-        {
-            super(myAgent, msg);
-            this.startMsg = startMsg;
-        }
-
-        @Override
-        public void onStart() {
-            super.onStart();
-            showMessage(startMsg);
-        }
-
-        protected void handleInform (ACLMessage msg)
-        {
-            showMessage("'" + msg.getSender().getLocalName()+"' sent: \""+msg.getContent()+"\"");
-        }
-
-
-    }
-
 
     ///////////////////////////////////////////////////////////////// Training /////////////////////////////////////////////////////////////////
-    class TrainingInitiator extends ContractNetInitiator{
-        private String startMsg;
-        public TrainingInitiator(Agent myAgent, ACLMessage CfpMsg, String startMsg)
-        {
-            super(myAgent, CfpMsg);
-            this.startMsg = startMsg;
-        }
-
-        @Override
-        public void onStart() {
-            super.onStart();
-            showMessage(startMsg);
-        }
-
-        protected void handleNotUnderstood (ACLMessage msg) {
-            showMessage(msg.getSender().getLocalName()+" did not understand the message");
-        }
-        protected void handleRefuse (ACLMessage msg) {
-            showMessage(msg.getSender().getLocalName()+" refused the message");
-        }
-        protected void handleInform (ACLMessage msg) {
-            showMessage(msg.getSender().getLocalName()+" informs: " + msg.getContent());
-        }
-        protected void handleFailure (ACLMessage msg) {
-            showMessage(msg.getSender().getLocalName()+" failed");
-        }
-    }
-
-    protected ACLMessage createDatasetMessage(String type, Instances dataset){
+    protected ACLMessage startTrainingOrTestMsg(String type, Instances dataset){
         ACLMessage msg = new ACLMessage();
         msg.addReceiver (CoordinatorAID);
         msg.setPerformative(ACLMessage.REQUEST);
@@ -218,7 +163,3 @@ public class UserAgent extends Agent
     ///////////////////////////////////////////////////////////////// Test /////////////////////////////////////////////////////////////////
     // TODO
 }
-
-
-
-

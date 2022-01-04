@@ -1,5 +1,7 @@
 package urv.imas.agents;
 
+import urv.imas.utils.*;
+
 import jade.core.*;
 import jade.core.behaviours.*;
 import jade.lang.acl.ACLMessage;
@@ -11,7 +13,6 @@ import jade.proto.ContractNetInitiator;
 import jade.domain.FIPANames;
 import jade.proto.ContractNetResponder;
 import jade.wrapper.AgentController;
-import urv.imas.utils.OurMessage;
 import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -19,6 +20,7 @@ import weka.core.Instances;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
 
 
 /**
@@ -30,7 +32,7 @@ import java.util.stream.IntStream;
  * @author Tiziana Trucco - CSELT S.p.A.
  * @version  $Date: 2010-04-08 13:08:55 +0200 (gio, 08 apr 2010) $ $Revision: 6297 $
  */
-public class CoordinatorAgent extends Agent
+public class CoordinatorAgent extends OurAgent
 {
     // Settings
     private AID UserAID = null;
@@ -47,14 +49,7 @@ public class CoordinatorAgent extends Agent
     private List<Attribute> [] classifiersAttributes;
     private List<Integer> [] classifiersAttributesInteger;
     private Instances [] classifiersInstances;
-
-
-
-
-    ///////////////////////////////////////////////////////////////// Auxiliar methods /////////////////////////////////////////////////////////////////
-    public void showMessage(String mss) {
-        System.out.println(getLocalName()+" -> "+mss);
-    }
+    private ACLMessage UserReply;
 
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
@@ -67,76 +62,65 @@ public class CoordinatorAgent extends Agent
 
         // Create the sequential behaviour for the agent life
         ParallelBehaviour sb = new ParallelBehaviour();// TODO: Change by sequential
-        sb.addSubBehaviour(new QueryResponder(this, MessageTemplate.MatchPerformative(ACLMessage.INFORM))); // Initialization
-        sb.addSubBehaviour(new CNResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST)));   // Training and test
+        sb.addSubBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+                "Initialization phase", (x)->{return initCallback(x);}, true));
+        sb.addSubBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
+                "Training and test phase", (x)->{return workingCallback(x);}, true));
         addBehaviour(sb);
     }
 
 
     ///////////////////////////////////////////////////////////////// Initialization behaviour /////////////////////////////////////////////////////////////////
-    class QueryResponder extends AchieveREResponder{
-        private ACLMessage userReply;
-        public QueryResponder (Agent myAgent, MessageTemplate mt)
-        {
-            super(myAgent, mt);
-        }
+    protected ACLMessage initCallback(ACLMessage msg){
+        ACLMessage reply = msg.createReply();
+        reply.setPerformative(ACLMessage.INFORM);
 
-        protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response)
-        {
-            return null;
-        }
+        if (msg.getContent() != null) {
+            reply.setContent("Correct initialization.");
+            AID sender = msg.getSender();
 
-        protected ACLMessage handleRequest(ACLMessage msg){
-            ACLMessage reply = msg.createReply();
-            reply.setPerformative(ACLMessage.INFORM);
+            if (sender.getLocalName().equals("user")) {
+                // If first message, create the required amount of classifiers
+                if (UserAID == null){
+                    UserAID = sender;
 
-            if (msg.getContent() != null) {
-                reply.setContent("Correct initialization.");
-                AID sender = msg.getSender();
+                    // Get settings
+                    try {
+                        OurMessage content = (OurMessage) msg.getContentObject();
+                        int[] settings = (int[]) content.obj;
+                        NumClassifiers = settings[0];
+                        NumInstancesPerClassifier = settings[1];
+                        NumTrainingInstancesPerClassifier = settings[2];
+                        NumValidationInstancesPerClassifier = settings[3];
+                        NumAttributesPerClassifier = settings[4];
 
-                if (sender.getLocalName().equals("user")) {
-                    // If first message, create the required amount of classifiers
-                    if (UserAID == null){
-                        UserAID = sender;
+                        // Create classifiers
+                        createClassifiers();
 
-                        // Get settings
-                        try {
-                            OurMessage content = (OurMessage) msg.getContentObject();
-                            int[] settings = (int[]) content.obj;
-                            NumClassifiers = settings[0];
-                            NumInstancesPerClassifier = settings[1];
-                            NumTrainingInstancesPerClassifier = settings[2];
-                            NumValidationInstancesPerClassifier = settings[3];
-                            NumAttributesPerClassifier = settings[4];
-
-                            // Create classifiers
-                            createClassifiers();
-
-                            // Store replay for when all classifiers callback is received
-                            userReply = reply;
-                        }catch(jade.lang.acl.UnreadableException e){
-                            showMessage("ERROR while receiving User initialization: "+e.getMessage());
-                        }
-
-                        // Don't answer now
-                        return null;
+                        // Store replay for when all classifiers callback is received
+                        UserReply = reply;
+                    }catch(jade.lang.acl.UnreadableException e){
+                        showMessage("ERROR while receiving User initialization: "+e.getMessage());
                     }
-                }else if (sender.getLocalName().contains("classifier")){
-                    classifiersAIDs.add(msg.getSender());
-                    if(classifiersAIDs.size() == NumClassifiers){
-                        send(userReply);
-                        // TODO: Finish this behaviour
-                    }
-                } else {
-                    showMessage(msg.getSender().getLocalName()+": Cannot register agent (invalid type).");
+
+                    // Don't answer now
+                    return null;
                 }
-            }else{
-                reply.setContent("Content was empty");  // TODO:
-                showMessage("Message was empty!");
+            }else if (sender.getLocalName().contains("classifier")){
+                classifiersAIDs.add(msg.getSender());
+                if(classifiersAIDs.size() == NumClassifiers){
+                    send(UserReply);
+                    // TODO: Finish this behaviour
+                }
+            } else {
+                showMessage(msg.getSender().getLocalName()+": Cannot register agent (invalid type).");
             }
-
-            return reply;
+        }else{
+            reply.setContent("Content was empty");  // TODO:
+            showMessage("Message was empty!");
         }
+
+        return reply;
     }
 
 
@@ -165,68 +149,34 @@ public class CoordinatorAgent extends Agent
 
 
     ///////////////////////////////////////////////////////////////// Working behaviour /////////////////////////////////////////////////////////////////
-    class CNResponder extends ContractNetResponder {
-        public CNResponder (Agent myAgent, MessageTemplate mt)
-        {
-            super(myAgent, mt);
-        }
-        protected ACLMessage prepareResponse (ACLMessage msg) {
-            if (msg != null) {
-                try {
-                    OurMessage content = (OurMessage) msg.getContentObject();
-                    String type = content.name;
-                    Instances dataset = (Instances)content.obj;
+    protected ACLMessage workingCallback(ACLMessage msg){
+        if (msg != null) {
+            try {
+                OurMessage content = (OurMessage) msg.getContentObject();
+                String type = content.name;
+                Instances dataset = (Instances)content.obj;
 
-                    // Start training or test
-                    if (type.equals("train")){
-                        train(dataset);
-                    }
-                    else if (type.equals("test")){
-                        ArrayList<Integer> predictions = test(dataset);
-                    }
-
-                    // TODO: Prepare answer message
-
-                } catch (UnreadableException e) {
-                    e.printStackTrace();
-                    showMessage("Could not read message");
+                // Start training or test
+                if (type.equals("train")){
+                    train(dataset);
                 }
-            }else{
-                showMessage("Message was empty!");
+                else if (type.equals("test")){
+                    ArrayList<Integer> predictions = test(dataset);
+                }
+
+                // TODO: Prepare answer message
+
+            } catch (UnreadableException e) {
+                e.printStackTrace();
+                showMessage("Could not read message");
             }
-            ACLMessage reply = msg.createReply();
-            reply.setPerformative(ACLMessage.INFORM);
-            reply.setContent("Dataset received.");
-            return reply;
+        }else{
+            showMessage("Message was empty!");
         }
-    }
-
-    class TrainingInitiator extends ContractNetInitiator{
-        private String startMsg;
-        public TrainingInitiator(Agent myAgent, ACLMessage CfpMsg, String startMsg)
-        {
-            super(myAgent, CfpMsg);
-            this.startMsg = startMsg;
-        }
-
-        @Override
-        public void onStart() {
-            super.onStart();
-            showMessage(startMsg);
-        }
-
-        protected void handleNotUnderstood (ACLMessage msg) {
-            showMessage(msg.getSender().getLocalName()+" did not understand the message");
-        }
-        protected void handleRefuse (ACLMessage msg) {
-            showMessage(msg.getSender().getLocalName()+" refused the message");
-        }
-        protected void handleInform (ACLMessage msg) {
-            showMessage(msg.getSender().getLocalName()+" informs: " + msg.getContent());
-        }
-        protected void handleFailure (ACLMessage msg) {
-            showMessage(msg.getSender().getLocalName()+" failed");
-        }
+        ACLMessage reply = msg.createReply();
+        reply.setPerformative(ACLMessage.INFORM);
+        reply.setContent("Dataset received.");
+        return reply;
     }
 
     protected void train(Instances dataset){
@@ -283,7 +233,7 @@ public class CoordinatorAgent extends Agent
                 showMessage("ERROR while creating dataset message:\n" + e.getMessage());
             }
             ACLMessage trainDatasetMsg = msg;
-            pb.addSubBehaviour(new TrainingInitiator(this, trainDatasetMsg, "Initializing training phase in classifier " + c));
+            pb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase for classifier " + c));
         }
         addBehaviour(pb);
     }
