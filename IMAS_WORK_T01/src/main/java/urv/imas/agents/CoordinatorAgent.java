@@ -4,11 +4,15 @@ import jade.core.*;
 import jade.core.behaviours.*;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
+import jade.lang.acl.UnreadableException;
 import jade.proto.AchieveREInitiator;
 import jade.proto.AchieveREResponder;
 import jade.proto.ContractNetInitiator;
 import jade.domain.FIPANames;
+import jade.proto.ContractNetResponder;
 import jade.wrapper.AgentController;
+import urv.imas.utils.OurDataset;
+import weka.core.Instances;
 
 import java.util.Date;
 import java.util.Vector;
@@ -32,6 +36,8 @@ public class CoordinatorAgent extends Agent
     private AID UserAID = null;
     private List <AID> classifiersAIDs;
     private int NumClassifiers;
+    private Instances TrainDataset;
+    private Instances TestDataset;
 
     ///////////////////////////////////////////////////////////////// Auxiliar methods /////////////////////////////////////////////////////////////////
     public void showMessage(String mss) {
@@ -48,6 +54,11 @@ public class CoordinatorAgent extends Agent
 
         QueryResponder bh1 = new QueryResponder(this, MessageTemplate.MatchPerformative(ACLMessage.INFORM));
         addBehaviour(bh1);
+
+        CNResponder bh2 = new CNResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST));
+        addBehaviour(bh2);
+
+
     }
 
     protected void createClassifiers(){
@@ -89,13 +100,23 @@ public class CoordinatorAgent extends Agent
     ///////////////////////////////////////////////////////////////// Initialization behaviour /////////////////////////////////////////////////////////////////
     class QueryResponder extends AchieveREResponder
     {
+        private ACLMessage userReply;
         public QueryResponder (Agent myAgent, MessageTemplate mt)
         {
             super(myAgent, mt);
         }
 
-        protected ACLMessage prepareResponse(ACLMessage msg)
+        protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response)
         {
+            return null;
+        }
+
+        protected ACLMessage handleRequest(ACLMessage msg)
+        {
+            ACLMessage reply = msg.createReply();
+            reply.setPerformative(ACLMessage.INFORM);
+            reply.setContent("Correct initialization.");
+
             if (msg != null) {
                 String content = msg.getContent();
                 if (content.contains("USER")) {
@@ -104,9 +125,14 @@ public class CoordinatorAgent extends Agent
                         UserAID = msg.getSender();
                         NumClassifiers = Integer.parseInt(content.replaceAll("[\\D]", ""));
                         createClassifiers();
+                        userReply = reply;
+                        return null;
                     }
                 }else if (content.contains("CLASSIFIER")){
                     classifiersAIDs.add(msg.getSender());
+                    if(classifiersAIDs.size() == NumClassifiers){
+                        send(userReply);
+                    }
                     // TODO: Finish this behaviour (or change to the working behaviour) when all created agents are registered?
                 } else {
                     showMessage(msg.getSender().getLocalName()+": Cannot register agent (invalid type).");
@@ -115,12 +141,46 @@ public class CoordinatorAgent extends Agent
                 showMessage("Message was empty!");
             }
 
-            ACLMessage reply = msg.createReply();
-            reply.setPerformative(ACLMessage.INFORM);
-            reply.setContent("Correct initialization.");
             return reply;
+
+
+
         }
     }
+
+    class CNResponder extends ContractNetResponder {
+        public CNResponder (Agent myAgent, MessageTemplate mt)
+        {
+            super(myAgent, mt);
+        }
+        protected ACLMessage prepareResponse (ACLMessage msg) {
+
+            if (msg != null) {
+                try {
+                    OurDataset request = (OurDataset) msg.getContentObject();
+                    String type = request.name;
+                    Instances dataset = request.instances;
+
+                    showMessage(type + " dataset correctly received.");
+                    if (type.equals("train")) TrainDataset = dataset;
+                    else if (type.equals("test")) TestDataset = dataset;
+                    // TODO INIT TRAIN STEP
+
+                } catch (UnreadableException e) {
+                    e.printStackTrace();
+                    showMessage("Could not read message");
+                }
+            }else{
+                showMessage("Message was empty!");
+            }
+            ACLMessage reply = msg.createReply();
+            reply.setPerformative(ACLMessage.INFORM);
+            reply.setContent("Dataset received.");
+            return reply;
+        }
+
+    }
+
 
     ///////////////////////////////////////////////////////////////// Working behaviour /////////////////////////////////////////////////////////////////
     // TODO: Use a request responder behaviour? One behaviour for receiving requests from user and another for generating them to the classifiers?
