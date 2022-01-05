@@ -145,17 +145,18 @@ public class ClassifierAgent extends OurAgent
      * @param trainingData The training data.
      * @return The J48 classifier.
      */
-    public Classifier createClassifier(Instance trainingData) {
-        Classifier classifier = null;
+    public Classifier createClassifier(Instances trainingData) { //TODO: fer l'split
 
         try {
             // Create the classifier
             classifier = new weka.classifiers.trees.J48();
             // Train the classifier
-            //classifier.buildClassifier(trainingData);    // TODO: It is not possible to create Instances from String
+            classifier.buildClassifier(trainingData);
         } catch (Exception e) {
             System.err.println("Error creating classifier: " + e.getMessage());
         }
+
+
 
         return classifier;
     }
@@ -176,6 +177,18 @@ public class ClassifierAgent extends OurAgent
         return val;
     }
 
+    private double[] classifyInstances(Instances testing){
+        int iterations = numInstances(testing);
+        double[] predictions = new  double[testing];
+        for (int i=0; i<iterations; ++i){
+            predictions[i] = classifyInstance(testing.get(i));
+
+        }
+
+        return predictions;
+
+    }
+
     /**
      * Get info about classifier
      * return String with info about classifier
@@ -185,6 +198,10 @@ public class ClassifierAgent extends OurAgent
     }*/
 
     protected ACLMessage prepareResponse (ACLMessage msg) {
+        ACLMessage reply = msg.createReply();
+        reply.setPerformative(ACLMessage.INFORM);
+        reply.setContent("Dataset received.");
+
         if (msg != null) {
             try {
                 OurMessage content = (OurMessage) msg.getContentObject();
@@ -193,10 +210,21 @@ public class ClassifierAgent extends OurAgent
 
                 // Start training or test
                 if (type.equals("train")){
-                    //TODO implement training
+                    // Split into training and validation (https://www.programcreek.com/java-api-examples/?api=weka.filters.Filter Example 3)
+                    int iniIdx = 0;
+                    int amount = 225;
+                    TrainDataset = new Instances(dataset, iniIdx, amount);
+                    iniIdx = iniIdx + amount;
+                    amount = 75;
+                    TestDataset = new Instances(dataset, iniIdx, amount);
+                    createClassifier(TrainDataset);
+                    eval = new Evaluation(TestDataset);
+                    double accuracy = eval.evaluateModel(classifier);
+                    reply.setContentObject(accuracy);
                 }
                 else if (type.equals("test")){
-                    //TODO implement testing
+                    double[] results = classifyInstances(dataset);
+                    reply.setContentObject(results);
                 }
 
             } catch (UnreadableException e) {
@@ -206,10 +234,7 @@ public class ClassifierAgent extends OurAgent
         }else{
             showMessage("Message was empty!");
         }
-        ACLMessage reply = msg.createReply();
-        reply.setPerformative(ACLMessage.INFORM);
-        reply.setContent("Dataset received.");
-        return reply;
+      return reply;
     }
 
 
