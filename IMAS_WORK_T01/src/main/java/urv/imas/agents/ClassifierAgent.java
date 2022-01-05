@@ -178,8 +178,8 @@ public class ClassifierAgent extends OurAgent
     }
 
     private double[] classifyInstances(Instances testing){
-        int iterations = numInstances(testing);
-        double[] predictions = new  double[testing];
+        int iterations = testing.numInstances();
+        double[] predictions = new double[iterations];
         for (int i=0; i<iterations; ++i){
             predictions[i] = classifyInstance(testing.get(i));
 
@@ -213,23 +213,23 @@ public class ClassifierAgent extends OurAgent
                     // Split into training and validation (https://www.programcreek.com/java-api-examples/?api=weka.filters.Filter Example 3)
                     int iniIdx = 0;
                     int amount = 225;
-                    TrainDataset = new Instances(dataset, iniIdx, amount);
+                    Instances trainDataset = new Instances(dataset, iniIdx, amount);
                     iniIdx = iniIdx + amount;
                     amount = 75;
-                    TestDataset = new Instances(dataset, iniIdx, amount);
-                    createClassifier(TrainDataset);
-                    eval = new Evaluation(TestDataset);
-                    double accuracy = eval.evaluateModel(classifier);
-                    reply.setContentObject(accuracy);
+                    Instances testDataset = new Instances(dataset, iniIdx, amount);
+                    createClassifier(trainDataset);
+                    eval = new Evaluation(testDataset);
+                    double[] predictions = eval.evaluateModel(classifier, testDataset);
+                    reply.setContentObject(predictions);
                 }
                 else if (type.equals("test")){
                     double[] results = classifyInstances(dataset);
                     reply.setContentObject(results);
                 }
 
-            } catch (UnreadableException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
-                showMessage("Could not read message");
+                showMessage("Exception during processing");
             }
         }else{
             showMessage("Message was empty!");
