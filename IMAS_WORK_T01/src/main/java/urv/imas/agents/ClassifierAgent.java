@@ -48,17 +48,16 @@ public class ClassifierAgent extends OurAgent
 
         CoordinatorAID = new AID((String) CoordName, AID.ISLOCALNAME);
 
-        // Create missage for the coordinator
+        // Create message for the coordinator
         ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
         msg.addReceiver(CoordinatorAID);
         msg.setSender(getAID());
         msg.setContent("I am CLASSIFIER");
-
         QueryInitiator bh1 = new QueryInitiator(this, msg);
         addBehaviour(bh1);
 
-        addBehaviour(new CNResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST)));
-
+        addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
+                "Training and test phase", (x)->{return prepareResponse(x);}, true));
     }
 
 
@@ -185,39 +184,32 @@ public class ClassifierAgent extends OurAgent
         return classifier.get_info();   // TODO: get_info method does not exist
     }*/
 
+    protected ACLMessage prepareResponse (ACLMessage msg) {
+        if (msg != null) {
+            try {
+                OurMessage content = (OurMessage) msg.getContentObject();
+                String type = content.name;
+                Instances dataset = (Instances)content.obj;
 
-    class CNResponder extends ContractNetResponder {
-        public CNResponder (Agent myAgent, MessageTemplate mt)
-        {
-            super(myAgent, mt);
-        }
-        protected ACLMessage prepareResponse (ACLMessage msg) {
-            if (msg != null) {
-                try {
-                    OurMessage content = (OurMessage) msg.getContentObject();
-                    String type = content.name;
-                    Instances dataset = (Instances)content.obj;
-
-                    // Start training or test
-                    if (type.equals("train")){
-                        //TODO implement training
-                    }
-                    else if (type.equals("test")){
-                        //TODO implement testing
-                    }
-
-                } catch (UnreadableException e) {
-                    e.printStackTrace();
-                    showMessage("Could not read message");
+                // Start training or test
+                if (type.equals("train")){
+                    //TODO implement training
                 }
-            }else{
-                showMessage("Message was empty!");
+                else if (type.equals("test")){
+                    //TODO implement testing
+                }
+
+            } catch (UnreadableException e) {
+                e.printStackTrace();
+                showMessage("Could not read message");
             }
-            ACLMessage reply = msg.createReply();
-            reply.setPerformative(ACLMessage.INFORM);
-            reply.setContent("Dataset received.");
-            return reply;
+        }else{
+            showMessage("Message was empty!");
         }
+        ACLMessage reply = msg.createReply();
+        reply.setPerformative(ACLMessage.INFORM);
+        reply.setContent("Dataset received.");
+        return reply;
     }
 
 
