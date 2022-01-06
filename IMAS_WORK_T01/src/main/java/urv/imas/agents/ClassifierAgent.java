@@ -188,6 +188,16 @@ public class ClassifierAgent extends OurAgent
         return predictions;
 
     }
+    
+    private double computeAcuracy(double[] predictions){
+        double correct = 0;
+        for (int i=0; i<predictions.length; ++i){
+            if (predictions[i] >= 0.5)){
+                correct++;
+            }
+        }
+        return correct/predictions.length;
+    }
 
     /**
      * Get info about classifier
@@ -224,7 +234,8 @@ public class ClassifierAgent extends OurAgent
                 }
                 else if (type.equals("test")){
                     double[] results = classifyInstances(dataset);
-                    reply.setContentObject(results);
+                    double accuracy = computeAcuracy(results);
+                    reply.setContentObject(accuracy);
                 }
 
             } catch (UnreadableException e) {
