@@ -39,17 +39,12 @@ public class OurAgent extends Agent {
         dfd.addServices(sd);
 
         try {
-            SearchConstraints c = new SearchConstraints();
-            DFAgentDescription[] result = DFService.search(this, dfd, c);
+            DFAgentDescription[] result = DFService.search(this, dfd);
             for (int i = 0; i < result.length; i++)
-                agents.add(result[i].getName());   // getName() is equal to get agent's AID
+                agents.add(result[i].getName().getLocalName());   // getName() is equal to get agent's AID
         }catch(Exception e){
             showMessage("ERROR searching "+type+" at DF: "+e.getMessage());
         }
-
-        //for(int i=0; i<agents.length; i++)
-        //    showMessage(""+agents.get(i));
-        showMessage(""+agents.get(0));
         return agents;
     }
 }
