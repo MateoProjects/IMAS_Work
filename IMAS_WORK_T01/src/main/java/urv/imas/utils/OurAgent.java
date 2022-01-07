@@ -17,11 +17,12 @@ public class OurAgent extends Agent {
 
     protected void RegisterInDF(String type){
         DFAgentDescription dfd = new DFAgentDescription();
-        ServiceDescription sd = new ServiceDescription();
-        sd.setName(getLocalName());
-        sd.setType(type);
-        dfd.addServices(sd);
         dfd.setName(getAID());
+        ServiceDescription sd = new ServiceDescription();
+        sd.setType(type);
+        sd.setName(getLocalName());
+        dfd.addServices(sd);
+
         try {
             DFService.register(this, dfd);
             showMessage("Registered at DF");
@@ -39,17 +40,13 @@ public class OurAgent extends Agent {
         dfd.addServices(sd);
 
         try {
-            SearchConstraints c = new SearchConstraints();
-            DFAgentDescription[] result = DFService.search(this, dfd, c);
+            DFAgentDescription[] result = DFService.search(this, dfd);
             for (int i = 0; i < result.length; i++)
-                agents.add(result[i].getName());   // getName() is equal to get agent's AID
+                agents.add(result[i].getName());
         }catch(Exception e){
             showMessage("ERROR searching "+type+" at DF: "+e.getMessage());
         }
 
-        //for(int i=0; i<agents.length; i++)
-        //    showMessage(""+agents.get(i));
-        showMessage(""+agents.get(0));
         return agents;
     }
 }

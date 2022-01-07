@@ -48,43 +48,12 @@ public class ClassifierAgent extends OurAgent
 
         CoordinatorAID = new AID((String) CoordName, AID.ISLOCALNAME);  // TODO: Do this using DF
 
-        // Create message for the coordinator
-        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-        msg.addReceiver(CoordinatorAID);
-        msg.setSender(getAID());
-        msg.setContent("I am CLASSIFIER");
-
-        ParallelBehaviour sb = new ParallelBehaviour();// TODO: Change by sequential
-
-        sb.addSubBehaviour( new OurRequestInitiator(this, msg, "Init phase"));
-
-        sb.addSubBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
+        addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
                 "Training and test phase", (x)->{return prepareResponse(x);}));
-
-        addBehaviour(sb);
     }
-
-
-
 
 
     ///////////////////////////////////////////////////////////////// Working behaviour /////////////////////////////////////////////////////////////////
-    class QueryInitiator extends AchieveREInitiator
-    {
-        /**
-         * Constructor of the class.
-         * @param myAgent The agent that is constructing this behaviour.
-         * @param msg The message to send.
-         */
-        public QueryInitiator (Agent myAgent, ACLMessage msg)
-        {
-            super(myAgent, msg);
-        }
-
-
-    }
-
-
     /**
      * This method create a weka J48 classifier and train it with the training data.
      * @param trainingData The training data.

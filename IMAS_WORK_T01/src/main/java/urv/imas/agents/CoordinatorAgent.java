@@ -99,28 +99,15 @@ public class CoordinatorAgent extends OurAgent
 
                         // Create classifiers
                         createClassifiers();
-
-                        // Store replay for when all classifiers callback is received
-                        UserReply = reply;
                     }catch(jade.lang.acl.UnreadableException e){
                         showMessage("ERROR while receiving User initialization: "+e.getMessage());
                     }
-
-                    // Don't answer now
-                    return null;
-                }
-            }else if (sender.getLocalName().contains("classifier")){
-                classifiersAIDs.add(msg.getSender());
-                if(classifiersAIDs.size() == NumClassifiers){
-                    send(UserReply);
-                    getFromDF("classifier");
-                    // TODO: Finish this behaviour
                 }
             } else {
                 showMessage(msg.getSender().getLocalName()+": Cannot register agent (invalid type).");
             }
         }else{
-            reply.setContent("Content was empty");  // TODO:
+            reply.setContent("Content was empty");
             showMessage("Message was empty!");
         }
 
@@ -183,6 +170,9 @@ public class CoordinatorAgent extends OurAgent
     }
 
     protected void train(Instances dataset){
+        jade.util.leap.List classifiers = getFromDF("classifier");
+        showMessage("There are "+classifiers.size()+" agents for training");
+
         // Create the sequential behaviour for the agent life
         ParallelBehaviour pb = new ParallelBehaviour();
 
