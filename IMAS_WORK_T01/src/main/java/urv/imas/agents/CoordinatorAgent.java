@@ -54,9 +54,7 @@ public class CoordinatorAgent extends OurAgent
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
     protected void setup() {
-        // Read name of classifiers as arguments (NOT ACTIVE NOW)
-        Object[] args = getArguments();
-        if (args != null && args.length > 0) {}else{}
+        RegisterInDF("coordinator");
 
         classifiersAIDs = new LinkedList<AID>();
 
@@ -115,6 +113,7 @@ public class CoordinatorAgent extends OurAgent
                 classifiersAIDs.add(msg.getSender());
                 if(classifiersAIDs.size() == NumClassifiers){
                     send(UserReply);
+                    getFromDF("classifier");
                     // TODO: Finish this behaviour
                 }
             } else {
@@ -145,7 +144,6 @@ public class CoordinatorAgent extends OurAgent
                 // TODO: arguments[1] = attributes Compute attributes to use by this classifier and add to arguments
                 agentController = containerController.createNewAgent(classifierName, className, arguments);
                 agentController.start();
-
             }
         }catch (Exception e){
             showMessage("ERROR while creating classifier "+classifierName+"\n"+e.getMessage());

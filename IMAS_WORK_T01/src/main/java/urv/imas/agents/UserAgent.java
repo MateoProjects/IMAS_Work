@@ -50,8 +50,7 @@ public class UserAgent extends OurAgent
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
     protected void setup() {
-        // Read creation arguments
-        readArguments();
+        RegisterInDF("user");
 
         // Read settings XML file
         showMessage("Reading settings");
@@ -78,11 +77,6 @@ public class UserAgent extends OurAgent
 
         // Add the sequential behaviour
         addBehaviour(sb);
-    }
-
-    protected void readArguments(){
-        Object[] args = getArguments();
-        if (args != null && args.length > 0) {} else{}  // TODO: Maybe read XML settings filepath (otherwise remove this method)
     }
 
     protected void readSettings(){

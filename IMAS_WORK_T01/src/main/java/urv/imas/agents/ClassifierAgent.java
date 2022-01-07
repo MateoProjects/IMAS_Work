@@ -11,7 +11,7 @@ import jade.lang.acl.MessageTemplate;
 import jade.lang.acl.UnreadableException;
 import jade.proto.AchieveREInitiator;
 import jade.proto.ContractNetInitiator;
-import jade.domain.FIPANames;
+
 
 import java.util.Date;
 import java.util.Vector;
@@ -44,11 +44,9 @@ public class ClassifierAgent extends OurAgent
      * It initiates the conversation with the CoordinatorAgent.
      */
     protected void setup() {
-        // Read name of classifiers as arguments (NOT ACTIVE NOW)
-        Object[] args = getArguments();
-        if (args != null && args.length > 0) {} else{}
+        RegisterInDF("classifier");
 
-        CoordinatorAID = new AID((String) CoordName, AID.ISLOCALNAME);
+        CoordinatorAID = new AID((String) CoordName, AID.ISLOCALNAME);  // TODO: Do this using DF
 
         // Create message for the coordinator
         ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
@@ -65,6 +63,9 @@ public class ClassifierAgent extends OurAgent
 
         addBehaviour(sb);
     }
+
+
+
 
 
     ///////////////////////////////////////////////////////////////// Working behaviour /////////////////////////////////////////////////////////////////
@@ -141,14 +142,6 @@ public class ClassifierAgent extends OurAgent
         return correct/predictions.length;
     }
 
-    /**
-     * Get info about classifier
-     * return String with info about classifier
-     */
-    /*public String get_infoClassifier() {
-        return classifier.get_info();   // TODO: get_info method does not exist
-    }*/
-
     protected ACLMessage prepareResponse (ACLMessage msg) {
         ACLMessage reply = msg.createReply();
         reply.setPerformative(ACLMessage.INFORM);
@@ -190,7 +183,6 @@ public class ClassifierAgent extends OurAgent
         }
       return reply;
     }
-
 
 }
 

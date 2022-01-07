@@ -1,3 +1,8 @@
-urv/imas/utils/OurAgent.class
-urv/imas/utils/OurRequestInitiator.class
-urv/imas/utils/OurRequestResponder.class
+urv\imas\utils\OurAgent.class
+urv\imas\utils\OurMessage.class
+urv\imas\agents\CoordinatorAgent.class
+urv\imas\utils\OurRequestInitiator.class
+urv\imas\agents\UserAgent.class
+urv\imas\agents\ClassifierAgent$QueryInitiator.class
+urv\imas\utils\OurRequestResponder.class
+urv\imas\agents\ClassifierAgent.class
