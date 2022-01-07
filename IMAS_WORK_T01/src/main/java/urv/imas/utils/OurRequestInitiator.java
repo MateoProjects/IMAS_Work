@@ -58,9 +58,11 @@ public class OurRequestInitiator extends AchieveREInitiator{
     }
 
     protected void handleInform (ACLMessage msg) {
-        agent.showMessage(getSenderName(msg)+" informs: " + msg.getContent());
         if(callback != null)
             callback.accept(msg);
+        else
+            agent.showMessage(getSenderName(msg)+" informs: " + msg.getContent());
+
     }
     protected void handleFailure (ACLMessage msg) {
         agent.showMessage(getSenderName(msg)+" failed: " + msg.getContent());

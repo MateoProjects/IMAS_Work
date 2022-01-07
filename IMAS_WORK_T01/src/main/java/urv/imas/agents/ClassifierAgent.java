@@ -1,5 +1,7 @@
 package urv.imas.agents;
 
+import jade.core.behaviours.ParallelBehaviour;
+import jade.core.behaviours.SequentialBehaviour;
 import urv.imas.utils.*;
 
 import jade.core.Agent;
@@ -53,11 +55,15 @@ public class ClassifierAgent extends OurAgent
         msg.addReceiver(CoordinatorAID);
         msg.setSender(getAID());
         msg.setContent("I am CLASSIFIER");
-        QueryInitiator bh1 = new QueryInitiator(this, msg);
-        addBehaviour(bh1);
 
-        addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-                "Training and test phase", (x)->{return prepareResponse(x);}, true));
+        ParallelBehaviour sb = new ParallelBehaviour();// TODO: Change by sequential
+
+        sb.addSubBehaviour( new OurRequestInitiator(this, msg, "Init phase"));
+
+        sb.addSubBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
+                "Training and test phase", (x)->{return prepareResponse(x);}));
+
+        addBehaviour(sb);
     }
 
 
@@ -94,8 +100,6 @@ public class ClassifierAgent extends OurAgent
             System.err.println("Error creating classifier: " + e.getMessage());
         }
 
-
-
         return classifier;
     }
 
@@ -127,10 +131,10 @@ public class ClassifierAgent extends OurAgent
 
     }
     
-    private double computeAcuracy(double[] predictions){
+    private double computeAcuracy(double[] predictions, Instances test_dataset){
         double correct = 0;
         for (int i=0; i<predictions.length; ++i){
-            if (predictions[i] >= 0.5)){
+            if (predictions[i] == test_dataset.get(i).classValue()){
                 correct++;
             }
         }
@@ -168,7 +172,9 @@ public class ClassifierAgent extends OurAgent
                     createClassifier(trainDataset);
                     eval = new Evaluation(testDataset);
                     double[] predictions = eval.evaluateModel(classifier, testDataset);
-                    reply.setContentObject(predictions);
+
+                    double accuracy = computeAcuracy(predictions, testDataset);
+                    reply.setContentObject(accuracy);
                 }
                 else if (type.equals("test")){
                     double[] results = classifyInstances(dataset);

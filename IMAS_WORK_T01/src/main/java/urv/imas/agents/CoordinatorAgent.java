@@ -61,11 +61,16 @@ public class CoordinatorAgent extends OurAgent
         classifiersAIDs = new LinkedList<AID>();
 
         // Create the sequential behaviour for the agent life
-        ParallelBehaviour sb = new ParallelBehaviour();// TODO: Change by sequential
-        sb.addSubBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.INFORM),
-                "Initialization phase", (x)->{return initCallback(x);}, true));
+        addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+                "Initialization phase", (x)->{return initCallback(x);}));
+
+
+        SequentialBehaviour sb = new SequentialBehaviour();// TODO: Change by sequential
         sb.addSubBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-                "Training and test phase", (x)->{return workingCallback(x);}, true));
+                "Training phase", (x)->{return workingCallback(x);}));
+        //sb.addSubBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
+          //      "Test phase", (x)->{return ¿?workingCallback(x);}, true));
+
         addBehaviour(sb);
     }
 
@@ -219,7 +224,9 @@ public class CoordinatorAgent extends OurAgent
 
             dataset.randomize(random);
             classifiersInstances[c] = new Instances(dataset, 0, NumInstancesPerClassifier);
+            classifiersInstances[c].setClassIndex(classifiersInstances[c].numAttributes() - 1);
             classifiersInstances[c] = deleteAttributes(classifiersInstances[c],classifiersAttributesInteger[c]);
+
 
             // Send training to classifier
             ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
@@ -233,9 +240,25 @@ public class CoordinatorAgent extends OurAgent
                 showMessage("ERROR while creating dataset message:\n" + e.getMessage());
             }
             ACLMessage trainDatasetMsg = msg;
-            pb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase for classifier " + c));
+            pb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase for classifier " + c, (this::printResults)));
         }
         addBehaviour(pb);
+    }
+
+    private void printResults(ACLMessage msg)
+    {
+        try {
+            double accuracy  = (double) msg.getContentObject();
+            showMessage("Predictions for " + msg.getSender().getLocalName() + ": "+ accuracy);
+        } catch (UnreadableException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void setValidationAccuracies(int c, Instances predictions)
+    {
+
     }
 
     private Instances deleteAttributes(Instances classifiersInstances,List<Integer> classifierAttributes)
@@ -244,7 +267,7 @@ public class CoordinatorAgent extends OurAgent
         int total = NumAttributesDataset;
         for (int i  = 0; i < total; i++)
         {
-            if (!classifierAttributes.contains(i))
+            if (!classifierAttributes.contains(i) && classifiersInstances.classIndex() != (i-deleted))
             {
                 classifiersInstances.deleteAttributeAt(i-deleted);
                 deleted += 1;

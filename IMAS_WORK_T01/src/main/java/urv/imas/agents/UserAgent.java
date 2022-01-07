@@ -72,6 +72,10 @@ public class UserAgent extends OurAgent
         ACLMessage trainDatasetMsg = startTrainingOrTestMsg("train", TrainDataset);
         sb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase"));
 
+        // Send testing dataset to coordinator
+        //ACLMessage testDatasetMsg = startTrainingOrTestMsg("test", TestDataset);
+        //sb.addSubBehaviour(new OurRequestInitiator(this, testDatasetMsg, "Testing phase"));
+
         // Add the sequential behaviour
         addBehaviour(sb);
     }

@@ -12,13 +12,13 @@ public class OurRequestResponder extends AchieveREResponder{
     private String taskName;
     private Function<ACLMessage, ACLMessage> computeResult;
     private boolean sendAgree;
-    public OurRequestResponder(OurAgent myAgent, MessageTemplate mt, String taskName, Function<ACLMessage, ACLMessage> computeResult, boolean sendAgree)
+    public OurRequestResponder(OurAgent myAgent, MessageTemplate mt, String taskName, Function<ACLMessage, ACLMessage> computeResult)
     {
         super(myAgent, mt);
         this.agent = myAgent;
         this.taskName = taskName;
         this.computeResult = computeResult;
-        this.sendAgree = sendAgree;
+        this.sendAgree = true;
     }
 
     @Override
