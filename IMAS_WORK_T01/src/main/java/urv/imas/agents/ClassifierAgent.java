@@ -46,7 +46,12 @@ public class ClassifierAgent extends OurAgent
     protected void setup() {
         RegisterInDF("classifier");
 
-        CoordinatorAID = new AID((String) CoordName, AID.ISLOCALNAME);  // TODO: Do this using DF
+        jade.util.leap.List coordinator = getFromDF("coordinator");
+
+        if (coordinator.size() > 0) {
+            CoordinatorAID = (AID) coordinator.get(0);
+        }else{showMessage("Could not find coordinator");}
+
 
         addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
                 "Training and test phase", (x)->{return prepareResponse(x);}));

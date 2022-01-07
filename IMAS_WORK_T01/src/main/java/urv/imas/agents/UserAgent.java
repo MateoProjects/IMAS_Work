@@ -123,7 +123,11 @@ public class UserAgent extends OurAgent
     }
 
     private ACLMessage initCoordinatorMsg() {
-        CoordinatorAID = new AID((String) CoordName, AID.ISLOCALNAME);
+        jade.util.leap.List coordinator = getFromDF("coordinator");
+        if (coordinator.size() > 0) {
+            CoordinatorAID = (AID) coordinator.get(0);
+        }else{showMessage("Could not find coordinator");}
+
         ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
         msg.addReceiver( CoordinatorAID );
         msg.setSender(getAID());

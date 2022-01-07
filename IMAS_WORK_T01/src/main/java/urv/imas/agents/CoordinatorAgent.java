@@ -172,7 +172,10 @@ public class CoordinatorAgent extends OurAgent
     protected void train(Instances dataset){
         jade.util.leap.List classifiers = getFromDF("classifier");
         showMessage("There are "+classifiers.size()+" agents for training");
-
+        for(int c=0; c < classifiers.size(); c++)
+        {
+            classifiersAIDs.add((AID) classifiers.get(c));
+        }
         // Create the sequential behaviour for the agent life
         ParallelBehaviour pb = new ParallelBehaviour();
 
