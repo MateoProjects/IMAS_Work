@@ -73,69 +73,7 @@ public class ClassifierAgent extends OurAgent
         {
             super(myAgent, msg);
         }
-        //Mètodes que caldrà implementar amb les accions pertinents
-        protected void handleInform (ACLMessage msg)
-        {
-            showMessage("'" + msg.getSender().getLocalName()+"' sent: \""+msg.getContent()+"\"");
-            // receive ACL message from the coordinator to train dataset and dataset from cordinator
-            String[] content = msg.getContent().split(" ");
 
-            ACLMessage reply;
-            switch (msg.getContent()){
-                case "train":
-                    ACLMessage trainingData = blockingReceive();
-                    //TODO: Recieve training data: 300 instances
-                    //TODO: Split train and validation (225 and 75)
-                    /*classifier = createClassifier(trainingData);   // TODO: Solventar aixó, perquè segur que peta aqui
-
-                    // retrun accuracy of classifier
-                    eval = new Evaluation(validationData);
-                    // evaluem el model
-                    double accuracy = eval.evaluateModel(classifier);
-
-                    // send prediction to coordinator agent
-                    reply = msg.createReply();
-                    reply.setPerformative(ACLMessage.INFORM);
-                    reply.setContent(Double.toString(accuracy));
-                    send(reply);*/
-
-                    break;
-            
-                case "classify":
-                    ACLMessage classificationData = blockingReceive();
-                    /*double result = classifyInstance(classificationData.getContent()); // TODO: Solventar aixó, perquè segur que peta aqui
-                    reply = msg.createReply();
-                    reply.setPerformative(ACLMessage.INFORM);
-                    reply.setContent(Double.toString(result));
-                    send(reply);*/
-                    break;
-                
-                case "getAtributes":
-                    reply = msg.createReply();
-                    reply.setPerformative(ACLMessage.INFORM);
-                    //reply.setContent(get_infoClassifier());
-                    send(reply);
-                    break;
-
-                case "globalInfo":
-                    reply = msg.createReply();
-                    reply.setPerformative(ACLMessage.INFORM);
-                    //reply.setContent(classifier.get_globalInfo());
-                    send(reply);
-                    break;
-
-                case "getGraph":
-                    reply = msg.createReply();
-                    reply.setPerformative(ACLMessage.INFORM);
-                    //reply.setContent(classifier.graph());
-                    send(reply);
-                    break;
-
-                default:    // TODO?
-                    break;
-            }
-    
-        }
 
     }
 
@@ -234,8 +172,7 @@ public class ClassifierAgent extends OurAgent
                 }
                 else if (type.equals("test")){
                     double[] results = classifyInstances(dataset);
-                    double accuracy = computeAcuracy(results);
-                    reply.setContentObject(accuracy);
+                    reply.setContentObject(results);
                 }
 
             } catch (Exception e) {
