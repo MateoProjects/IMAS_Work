@@ -42,11 +42,10 @@ public class OurAgent extends Agent {
         try {
             DFAgentDescription[] result = DFService.search(this, dfd);
             for (int i = 0; i < result.length; i++)
-                agents.add(result[i].getName());
+                agents.add(result[i].getName());    // getName() is equal to get agent's AID
         }catch(Exception e){
             showMessage("ERROR searching "+type+" at DF: "+e.getMessage());
         }
-
         return agents;
     }
 }
