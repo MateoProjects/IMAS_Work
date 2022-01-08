@@ -86,7 +86,7 @@ public class ClassifierAgent extends OurAgent
 
     /**
      * Evaluate the classifier.
-     * @param testData The test data.
+     * @param testing The test data.
      * @return The evaluation.
      */
 
@@ -105,7 +105,7 @@ public class ClassifierAgent extends OurAgent
     /**
      * Compute the accuracy of the classifier.
      * @param predictions The predictions that classifier does.
-     * @param testing The test data.
+     * @param test_dataset The test data.
      * @return The accuracy. 
      */
     
@@ -138,9 +138,9 @@ public class ClassifierAgent extends OurAgent
                 // Start training or test
                 if (type.equals("train")){
                     int iniIdx = 0;
-                    int amountTraining = dataset.numInstances() * 0.75;
+                    int amountTraining = (int)Math.round(dataset.numInstances() * 0.75);
                     Instances trainDataset = new Instances(dataset, iniIdx, amountTraining);
-                    iniIdx = iniIdx + amount;
+                    iniIdx = iniIdx + amountTraining;
                     int amountTest = dataset.numInstances() - amountTraining;
                     Instances testDataset = new Instances(dataset, iniIdx, amountTest);
                     createClassifier(trainDataset);
