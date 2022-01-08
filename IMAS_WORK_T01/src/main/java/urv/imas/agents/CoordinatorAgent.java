@@ -18,6 +18,7 @@ import weka.core.Instance;
 import weka.core.Instances;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -60,12 +61,12 @@ public class CoordinatorAgent extends OurAgent
 
         // Create the sequential behaviour for the agent life
         addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.INFORM),
-                "Initialization phase", (x)->{return initCallback(x);}));
+                "Initialization phase","INIT-PHASE", this::initCallback));
 
 
-        SequentialBehaviour sb = new SequentialBehaviour();// TODO: Change by sequential
+        SequentialBehaviour sb = new SequentialBehaviour();
         sb.addSubBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-                "Training phase", (x)->{return workingCallback(x);}));
+                "Training phase","TRAIN-PHASE", this::workingCallback));
         //sb.addSubBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
           //      "Test phase", (x)->{return ¿?workingCallback(x);}, true));
 
@@ -79,14 +80,13 @@ public class CoordinatorAgent extends OurAgent
         reply.setPerformative(ACLMessage.INFORM);
 
         if (msg.getContent() != null) {
-            reply.setContent("Correct initialization.");
             AID sender = msg.getSender();
-
-            if (sender.getLocalName().equals("user")) {
+            ///// INITIALIZATION RESPONSE /////
+            if (msg.getConversationId()=="INIT-PHASE" && sender.getLocalName().equals("user")) {
+                reply.setContent("Correct initialization.");
                 // If first message, create the required amount of classifiers
-                if (UserAID == null){
+                if (UserAID == null) {
                     UserAID = sender;
-
                     // Get settings
                     try {
                         OurMessage content = (OurMessage) msg.getContentObject();
@@ -99,13 +99,37 @@ public class CoordinatorAgent extends OurAgent
 
                         // Create classifiers
                         createClassifiers();
-                    }catch(jade.lang.acl.UnreadableException e){
-                        showMessage("ERROR while receiving User initialization: "+e.getMessage());
+                    } catch (UnreadableException e) {
+                        showMessage("ERROR while receiving User initialization: " + e.getMessage());
                     }
+                } else {
+                    showMessage("User was already registered");
                 }
-            } else {
-                showMessage(msg.getSender().getLocalName()+": Cannot register agent (invalid type).");
+            ///// INIT ERROR RESPONSE /////
+            } else if (msg.getConversationId()=="INIT-PHASE" && !sender.getLocalName().equals("user"))
+            {
+                showMessage("Initialization can only be started by the user.");
             }
+            ///// TRAINING RESPONSE /////
+            else if (msg.getConversationId()=="TRAIN-PHASE")
+            {
+                showMessage("We are in training");
+            }
+            ///// TESTING RESPONSE /////
+            else if (msg.getConversationId()=="TEST-PHASE")
+            {
+                showMessage("NOT YET IMPLEMENTED");
+            }
+            ///// NO MATCHING ID RESPONSE /////
+            else {
+                showMessage("Was not expecting any other conversation.");
+                try {
+                    showMessage(msg.getContentObject().toString());
+                } catch (UnreadableException e) {
+                    e.printStackTrace();
+                }
+            }
+
         }else{
             reply.setContent("Content was empty");
             showMessage("Message was empty!");
@@ -126,12 +150,15 @@ public class CoordinatorAgent extends OurAgent
         jade.wrapper.AgentContainer containerController = getContainerController();  // Get current container
         AgentController agentController = null;
         try{
+
             for (int i = 0; i < NumClassifiers; i++){
                 classifierName = "classifier"+i;
                 // TODO: arguments[1] = attributes Compute attributes to use by this classifier and add to arguments
                 agentController = containerController.createNewAgent(classifierName, className, arguments);
                 agentController.start();
             }
+            TimeUnit.SECONDS.sleep(1);
+
         }catch (Exception e){
             showMessage("ERROR while creating classifier "+classifierName+"\n"+e.getMessage());
         }
@@ -140,32 +167,36 @@ public class CoordinatorAgent extends OurAgent
 
     ///////////////////////////////////////////////////////////////// Working behaviour /////////////////////////////////////////////////////////////////
     protected ACLMessage workingCallback(ACLMessage msg){
+        ACLMessage reply = null;
         if (msg != null) {
-            try {
-                OurMessage content = (OurMessage) msg.getContentObject();
-                String type = content.name;
-                Instances dataset = (Instances)content.obj;
+            if (msg.getConversationId().equals("TRAIN-PHASE") || msg.getConversationId().equals("TEST-PHASE") )
+            {
+                try {
+                    OurMessage content = (OurMessage) msg.getContentObject();
+                    String type = content.name;
+                    Instances dataset = (Instances)content.obj;
 
-                // Start training or test
-                if (type.equals("train")){
-                    train(dataset);
+                    // Start training or test
+                    if (type.equals("train")){
+                        train(dataset);
+                    }
+                    else if (type.equals("test")){
+                        ArrayList<Integer> predictions = test(dataset);
+                    }
+
+                    // TODO: Prepare answer message
+
+                } catch (UnreadableException e) {
+                    e.printStackTrace();
+                    showMessage("Could not read message");
                 }
-                else if (type.equals("test")){
-                    ArrayList<Integer> predictions = test(dataset);
-                }
-
-                // TODO: Prepare answer message
-
-            } catch (UnreadableException e) {
-                e.printStackTrace();
-                showMessage("Could not read message");
-            }
+            } else showMessage("Was not expecting any other conversation");
+            reply = msg.createReply();
+            reply.setPerformative(ACLMessage.INFORM);
+            reply.setContent("Dataset received.");
         }else{
             showMessage("Message was empty!");
         }
-        ACLMessage reply = msg.createReply();
-        reply.setPerformative(ACLMessage.INFORM);
-        reply.setContent("Dataset received.");
         return reply;
     }
 
@@ -231,7 +262,7 @@ public class CoordinatorAgent extends OurAgent
                 showMessage("ERROR while creating dataset message:\n" + e.getMessage());
             }
             ACLMessage trainDatasetMsg = msg;
-            pb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase for classifier " + c, (this::printResults)));
+            pb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase for classifier " + c, "TRAIN-PHASE",(this::printResults)));
         }
         addBehaviour(pb);
     }

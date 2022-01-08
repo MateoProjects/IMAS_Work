@@ -9,34 +9,37 @@ import java.util.function.*;
 public class OurRequestInitiator extends AchieveREInitiator{
     private OurAgent agent;
     private String taskName;
+    private String conversationID;
     private Consumer<ACLMessage> callback;
 
-    public OurRequestInitiator(OurAgent myAgent, ACLMessage request, String taskName, Consumer<ACLMessage> callback)
+    public OurRequestInitiator(OurAgent myAgent, ACLMessage request, String taskName, String conversationID, Consumer<ACLMessage> callback)
     {
         super(myAgent, request);
         this.agent = myAgent;
         this.taskName = taskName;
+        this.conversationID = conversationID;
         this.callback = callback;
     }
-    public OurRequestInitiator(OurAgent myAgent, ACLMessage request, String taskName)
+    public OurRequestInitiator(OurAgent myAgent, ACLMessage request, String taskName, String conversationID)
     {
         super(myAgent, request);
         this.agent = myAgent;
         this.taskName = taskName;
+        this.conversationID = conversationID;
     }
 
     @Override
     public void onStart() {
         super.onStart();
         if (taskName != "")
-            agent.showMessage("Starting ["+taskName+"].");
+            agent.showMessage("Starting ["+taskName+"] (initiator).");
     }
 
     @Override
     public int onEnd(){
         int result = super.onEnd();
         if (taskName != "")
-            agent.showMessage("["+taskName+"] ended.");
+            agent.showMessage("["+taskName+"] ended (initiator).");
         return result;
     }
 
@@ -54,7 +57,7 @@ public class OurRequestInitiator extends AchieveREInitiator{
         agent.showMessage(getSenderName(msg)+" refused the message: "+msg.getContent());
     }
     protected void handleOutOfSequence (ACLMessage msg) {
-        agent.showMessage(getSenderName(msg)+" sended a message out of sequence: "+msg.getContent());
+        agent.showMessage(getSenderName(msg)+" sent a message out of sequence: "+msg.getContent());
     }
 
     protected void handleInform (ACLMessage msg) {

@@ -1,23 +1,12 @@
 package urv.imas.agents;
 
-import jade.core.behaviours.ParallelBehaviour;
-import jade.core.behaviours.SequentialBehaviour;
 import urv.imas.utils.*;
 
-import jade.core.Agent;
 import jade.core.AID;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-import jade.lang.acl.UnreadableException;
-import jade.proto.AchieveREInitiator;
-import jade.proto.ContractNetInitiator;
 
 
-import java.util.Date;
-import java.util.Vector;
-import java.util.Enumeration;
-
-import jade.proto.ContractNetResponder;
 import weka.classifiers.*;
 import weka.core.*;
 
@@ -50,11 +39,11 @@ public class ClassifierAgent extends OurAgent
 
         if (coordinator.size() > 0) {
             CoordinatorAID = (AID) coordinator.get(0);
-        }else{showMessage("Could not find coordinator");}
+            addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
+                    "Training and test phase","TRAIN-PHASE", this::prepareResponse));
+        }else
+            showMessage("Could not find coordinator");
 
-
-        addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-                "Training and test phase", (x)->{return prepareResponse(x);}));
     }
 
 
@@ -64,7 +53,7 @@ public class ClassifierAgent extends OurAgent
      * @param trainingData The training data.
      * @return The J48 classifier.
      */
-    public Classifier createClassifier(Instances trainingData) { //TODO: fer l'split
+    public Classifier createClassifier(Instances trainingData) {
 
         try {
             // Create the classifier
@@ -106,7 +95,7 @@ public class ClassifierAgent extends OurAgent
 
     }
     
-    private double computeAcuracy(double[] predictions, Instances test_dataset){
+    private double computeAccuracy(double[] predictions, Instances test_dataset){
         double correct = 0;
         for (int i=0; i<predictions.length; ++i){
             if (predictions[i] == test_dataset.get(i).classValue()){
@@ -140,12 +129,14 @@ public class ClassifierAgent extends OurAgent
                     eval = new Evaluation(testDataset);
                     double[] predictions = eval.evaluateModel(classifier, testDataset);
 
-                    double accuracy = computeAcuracy(predictions, testDataset);
+                    double accuracy = computeAccuracy(predictions, testDataset);
                     reply.setContentObject(accuracy);
+                    reply.setConversationId("TRAIN-PHASE");
                 }
                 else if (type.equals("test")){
                     double[] results = classifyInstances(dataset);
                     reply.setContentObject(results);
+                    reply.setConversationId("TEST-PHASE");
                 }
 
             } catch (Exception e) {
@@ -155,7 +146,7 @@ public class ClassifierAgent extends OurAgent
         }else{
             showMessage("Message was empty!");
         }
-      return reply;
+        return reply;
     }
 
 }

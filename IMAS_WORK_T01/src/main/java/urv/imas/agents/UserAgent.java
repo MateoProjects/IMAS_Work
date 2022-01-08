@@ -50,7 +50,7 @@ public class UserAgent extends OurAgent
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
     protected void setup() {
-        RegisterInDF("user");
+        //RegisterInDF("user");
 
         // Read settings XML file
         showMessage("Reading settings");
@@ -65,18 +65,26 @@ public class UserAgent extends OurAgent
 
         // Start comunication with coordinator (initialization behaviour)
         ACLMessage msg = initCoordinatorMsg();
-        sb.addSubBehaviour(new OurRequestInitiator(this, msg, "Coordinator initialization phase"));
+        if (msg != null) {
+            // Start the initialization of the coordinator
+            msg.setConversationId("INIT-PHASE");
+            sb.addSubBehaviour(new OurRequestInitiator(this, msg, "Coordinator initialization phase", "INIT-PHASE"));
 
-        // Send training dataset to coordinator
-        ACLMessage trainDatasetMsg = startTrainingOrTestMsg("train", TrainDataset);
-        sb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase"));
+            // Send training dataset to coordinator
+            ACLMessage trainDatasetMsg = startTrainingOrTestMsg("train", TrainDataset);
+            trainDatasetMsg.setConversationId("TRAIN-PHASE");
+            sb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase", "TRAIN-PHASE"));
 
-        // Send testing dataset to coordinator
-        //ACLMessage testDatasetMsg = startTrainingOrTestMsg("test", TestDataset);
-        //sb.addSubBehaviour(new OurRequestInitiator(this, testDatasetMsg, "Testing phase"));
+            // Send testing dataset to coordinator
+            //ACLMessage testDatasetMsg = startTrainingOrTestMsg("test", TestDataset);
+            //sb.addSubBehaviour(new OurRequestInitiator(this, testDatasetMsg, "Testing phase"));
 
-        // Add the sequential behaviour
-        addBehaviour(sb);
+            // Add the sequential behaviour
+            addBehaviour(sb);
+        } else
+        {
+            showMessage("Aborting process...");
+        }
     }
 
     protected void readSettings(){
@@ -124,22 +132,27 @@ public class UserAgent extends OurAgent
 
     private ACLMessage initCoordinatorMsg() {
         jade.util.leap.List coordinator = getFromDF("coordinator");
+        ACLMessage msg = null;
+
+        // If we have found some coordinator, send the initialization message
         if (coordinator.size() > 0) {
             CoordinatorAID = (AID) coordinator.get(0);
+            showMessage("Coordinator found: " + CoordinatorAID);
+
+            msg = new ACLMessage(ACLMessage.INFORM);
+            msg.addReceiver(CoordinatorAID);
+            msg.setSender(getAID());
+
+            int[] settings = new int[]{NumClassifiers, NumInstancesPerClassifier, NumTrainingInstancesPerClassifier,
+                    NumValidationInstancesPerClassifier, NumAttributesPerClassifier};
+            OurMessage content = new OurMessage("ini", settings);
+            try{
+                msg.setContentObject(content);
+            }catch(java.io.IOException e){
+                showMessage("ERROR while initializing coordinator: "+e.getMessage());
+            }
+
         }else{showMessage("Could not find coordinator");}
-
-        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-        msg.addReceiver( CoordinatorAID );
-        msg.setSender(getAID());
-
-        int[] settings = new int[]{NumClassifiers, NumInstancesPerClassifier, NumTrainingInstancesPerClassifier,
-                NumValidationInstancesPerClassifier, NumAttributesPerClassifier};
-        OurMessage content = new OurMessage("ini", settings);
-        try{
-            msg.setContentObject(content);
-        }catch(java.io.IOException e){
-            showMessage("ERROR while initializing coordinator: "+e.getMessage());
-        }
 
         return msg;
     }
