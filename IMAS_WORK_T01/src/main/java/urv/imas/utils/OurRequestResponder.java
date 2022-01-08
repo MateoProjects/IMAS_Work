@@ -27,14 +27,14 @@ public class OurRequestResponder extends AchieveREResponder{
     public void onStart() {
         super.onStart();
         if (!Objects.equals(taskName, ""))
-            agent.showMessage("Starting ["+taskName+"] (responder).");
+            agent.showMessage("Starting ["+taskName+"].");
     }
 
     @Override
     public int onEnd(){
         int result = super.onEnd();
         if (!Objects.equals(taskName, ""))
-            agent.showMessage("["+taskName+"] ended (responder).");
+            agent.showMessage("["+taskName+"] ended.");
         return result;
     }
 

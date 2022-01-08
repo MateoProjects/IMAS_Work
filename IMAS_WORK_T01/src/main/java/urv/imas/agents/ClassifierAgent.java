@@ -6,9 +6,10 @@ import jade.core.AID;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
-
 import weka.classifiers.*;
 import weka.core.*;
+
+import java.util.*;
 
 
 
@@ -49,37 +50,29 @@ public class ClassifierAgent extends OurAgent
         ACLMessage reply = msg.createReply();
         reply.setPerformative(ACLMessage.INFORM);
 
-        if (msg.getSender() != CoordinatorAID) {
-            try {
-                OurMessage content = (OurMessage) msg.getContentObject();
-                String type = content.name;
-                Object[] args = (Object[]) content.obj;
-                Instances dataset = (Instances) args[0];
-
-                // Start training or test
-                if (type.equals("train")) {
-                    double accuracy = train(dataset, args);
-
-                    // Set answer
-                    reply.setContentObject(accuracy);
-                } else if (type.equals("test")) {
-                    double[] results = predict(dataset);
-                    reply.setContentObject(results);
-                } else {
-                    String errorMessage = "Type [" + type + "] is unknown";
-                    reply.setPerformative(ACLMessage.FAILURE);
-                    showErrorMessage(errorMessage);
-                    reply.setContent(errorMessage);
-                }
-
-            } catch (Exception e) {
-                String errorMessage = "Exception " + e.getMessage();
-                reply.setPerformative(ACLMessage.FAILURE);
-                showErrorMessage(errorMessage);
-                reply.setContent(errorMessage);
+        try {
+            if (!msg.getSender().equals(CoordinatorAID)) {
+                throw new Exception("Sender ["+msg.getSender()+"] different from coordinator ("+CoordinatorAID+")");
             }
-        } else {
-            String errorMessage = "AID not recognised";
+            OurMessage content = (OurMessage) msg.getContentObject();
+            String type = content.name;
+            Object[] args = (Object[]) content.obj;
+
+            // Start training or test
+            if (type.equals("train")) {
+                Instances dataset = (Instances) args[0];
+                int numValidationInstances = (int)args[1];
+                double accuracy = train(dataset, numValidationInstances);
+                reply.setContentObject(accuracy);
+            } else if (type.equals("test")) {
+                List<Instances> instances = (List<Instances>)args[0];
+                double[] results = test(instances);
+                reply.setContentObject(results);
+            } else
+                throw new Exception("Request type ["+type+"] unknown");
+
+        } catch (Exception e) {
+            String errorMessage = "Exception:" + e.getMessage();
             reply.setPerformative(ACLMessage.FAILURE);
             showErrorMessage(errorMessage);
             reply.setContent(errorMessage);
@@ -89,9 +82,10 @@ public class ClassifierAgent extends OurAgent
     }
 
 
-    private double train(Instances dataset, Object[] args) throws Exception{
+    ///////////////////////////////////////////////////////////////// Training /////////////////////////////////////////////////////////////////
+    private double train(Instances dataset, int numValidationInstances) throws Exception{
+        showMessage("Starting training");
         // Split into training and validation
-        int numValidationInstances = (int)args[1];
         int iniIdx = 0;
         int amountTraining = dataset.numInstances() - numValidationInstances;
         Instances trainDataset = new Instances(dataset, iniIdx, amountTraining);
@@ -124,38 +118,6 @@ public class ClassifierAgent extends OurAgent
         }
     }
 
-
-    /**
-     * Evaluate the classifier.
-     * @param testing The test data.
-     * @return The evaluation.
-     */
-    private double[] predict(Instances testing){
-        int numIterations = testing.numInstances();
-        double[] predictions = new double[numIterations];
-        for (int i=0; i<numIterations; ++i)
-            predictions[i] = classifyInstance(testing.get(i));
-
-        return predictions;
-    }
-
-    /**
-     * Classify the given instance.
-     * @param instance instance to classify and predict
-     * @return The predicted class.
-     */
-    public double classifyInstance(Instance instance) {
-        double val = -1;
-        try{
-            val = this.classifier.classifyInstance(instance);
-        }catch (Exception e){
-            showMessage("ERROR while classifying instance: "+instance);
-        }
-
-        return val;
-    }
-
-
     /**
      * Compute the accuracy of the classifier.
      * @param predictions The predictions that classifier does.
@@ -171,6 +133,39 @@ public class ClassifierAgent extends OurAgent
         return correct/predictions.length;
     }
 
+
+    ///////////////////////////////////////////////////////////////// Test /////////////////////////////////////////////////////////////////
+    /**
+     * Evaluate the classifier.
+     * @param testing The test data.
+     * @return The evaluation.
+     */
+    private double[] test(List<Instances> instances){
+        showMessage("Starting testing");
+        int numInstances = instances.size();
+        double[] predictions = new double[numInstances];
+        for (int i=0; i<numInstances; i++){
+            predictions[i] = classifyInstance(instances.get(i).get(0));
+        }
+
+        return predictions;
+    }
+
+    /**
+     * Classify the given instance.
+     * @param instance instance to classify and predict
+     * @return The predicted class.
+     */
+    public double classifyInstance(Instance instance) {
+        double val = -1;
+        try{
+            val = this.classifier.classifyInstance(instance);
+        }catch (Exception e){
+            showMessage("ERROR while classifying instance: "+instance+" "+e.getMessage());
+        }
+
+        return val;
+    }
 
 }
 

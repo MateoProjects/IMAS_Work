@@ -30,14 +30,14 @@ public class OurRequestInitiator extends AchieveREInitiator{
     public void onStart() {
         super.onStart();
         if (!Objects.equals(taskName, ""))
-            agent.showMessage("Starting ["+taskName+"] (initiator).");
+            agent.showMessage("Starting ["+taskName+"].");
     }
 
     @Override
     public int onEnd(){
         int result = super.onEnd();
         if (!Objects.equals(taskName, ""))
-            agent.showMessage("["+taskName+"] ended (initiator).");
+            agent.showMessage("["+taskName+"] ended.");
         return result;
     }
 
@@ -46,16 +46,16 @@ public class OurRequestInitiator extends AchieveREInitiator{
     }
 
     protected void handleAgree (ACLMessage msg) {
-        agent.showMessage(getSenderName(msg)+" agrees to perform the request: "+msg.getContent());
+        agent.showMessage(getSenderName(msg)+" agrees to perform the request");
     }
     protected void handleNotUnderstood (ACLMessage msg) {
-        agent.showMessage(getSenderName(msg)+" did not understand the message: "+msg.getContent());
+        agent.showMessage(getSenderName(msg)+" did not understand the request: "+msg);
     }
     protected void handleRefuse (ACLMessage msg) {
-        agent.showMessage(getSenderName(msg)+" refused the message: "+msg.getContent());
+        agent.showMessage(getSenderName(msg)+" refused the request: "+msg);
     }
     protected void handleOutOfSequence (ACLMessage msg) {
-        agent.showMessage(getSenderName(msg)+" sent a message out of sequence: "+msg.getContent());
+        agent.showMessage(getSenderName(msg)+" sent a message out of sequence: "+msg);
     }
 
     protected void handleInform (ACLMessage msg) {

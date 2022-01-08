@@ -6,6 +6,7 @@ import jade.domain.FIPAAgentManagement.*;
 import jade.domain.FIPAException;
 import jade.core.Agent;
 import jade.core.*;
+import jade.lang.acl.ACLMessage;
 
 
 public class OurAgent extends Agent {
@@ -19,6 +20,20 @@ public class OurAgent extends Agent {
         showMessage("ERROR: "+text);
     }
 
+    protected ACLMessage createOurMessageRequest(AID agent, String type, Object[] cont){
+        ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+        msg.addReceiver(agent);
+        OurMessage content = new OurMessage(type,  cont);
+        try
+        {
+            msg.setContentObject(content);
+            msg.setLanguage("JavaSerialization");
+        } catch(Exception e){
+            showErrorMessage("while creating "+type+" message:\n" + e.getMessage());
+        }
+
+        return msg;
+    }
 
     ///////////////////////////////////////////////////////////////// Directory Facilitator /////////////////////////////////////////////////////////////////
     protected void RegisterInDF(String type){
