@@ -37,7 +37,6 @@ public class UserAgent extends OurAgent
     private int NumTestInstances;
     private int NumTestAttributes;
     private int NumInstancesPerClassifier;
-    private int NumTrainingInstancesPerClassifier;
     private int NumValidationInstancesPerClassifier;
     private int NumAttributesPerClassifier;
 
@@ -50,7 +49,7 @@ public class UserAgent extends OurAgent
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
     protected void setup() {
-        //RegisterInDF("user");
+        RegisterInDF("user");
 
         // Read settings XML file
         showMessage("Reading settings");
@@ -60,31 +59,22 @@ public class UserAgent extends OurAgent
         showMessage("Reading dataset");
         readDataset();
 
+        // Find coordinator
+        showMessage("Searching for coordinator");
+        CoordinatorAID = blockingGetFromDF("coordinator");
+        showMessage("Coordinator found: "+ CoordinatorAID);
+
         // Create the sequential behaviour for the agent life
         SequentialBehaviour sb = new SequentialBehaviour();
-
-        // Start comunication with coordinator (initialization behaviour)
-        ACLMessage msg = initCoordinatorMsg();
-        if (msg != null) {
-            // Start the initialization of the coordinator
-            msg.setConversationId("INIT-PHASE");
-            sb.addSubBehaviour(new OurRequestInitiator(this, msg, "Coordinator initialization phase", "INIT-PHASE"));
-
-            // Send training dataset to coordinator
-            ACLMessage trainDatasetMsg = startTrainingOrTestMsg("train", TrainDataset);
-            trainDatasetMsg.setConversationId("TRAIN-PHASE");
-            sb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase", "TRAIN-PHASE"));
-
-            // Send testing dataset to coordinator
-            //ACLMessage testDatasetMsg = startTrainingOrTestMsg("test", TestDataset);
-            //sb.addSubBehaviour(new OurRequestInitiator(this, testDatasetMsg, "Testing phase"));
-
-            // Add the sequential behaviour
-            addBehaviour(sb);
-        } else
-        {
-            showMessage("Aborting process...");
-        }
+        // Training phase
+        ACLMessage trainDatasetMsg = startTrainingOrTestMsg("train", TrainDataset);
+        //trainDatasetMsg.setConversationId("TRAIN-PHASE");
+        sb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase", "TRAIN-PHASE"));
+        // Testing phase
+        //ACLMessage testDatasetMsg = startTrainingOrTestMsg("test", TestDataset);
+        //sb.addSubBehaviour(new OurRequestInitiator(this, testDatasetMsg, "Testing phase"));
+        // Add the sequential behaviour
+        addBehaviour(sb);
     }
 
     protected void readSettings(){
@@ -100,7 +90,6 @@ public class UserAgent extends OurAgent
             NumTestInstances = Integer.parseInt(document.getElementsByTagName("num_test_instances").item(0).getTextContent());
             NumTestAttributes = Integer.parseInt(document.getElementsByTagName("num_test_attributes").item(0).getTextContent());
             NumInstancesPerClassifier = Integer.parseInt(document.getElementsByTagName("num_instances_per_classifier").item(0).getTextContent());
-            NumTrainingInstancesPerClassifier = Integer.parseInt(document.getElementsByTagName("num_training_instances_per_classifier").item(0).getTextContent());
             NumValidationInstancesPerClassifier = Integer.parseInt(document.getElementsByTagName("num_validation_instances_per_classifier").item(0).getTextContent());
             NumAttributesPerClassifier = Integer.parseInt(document.getElementsByTagName("num_training_attributes_per_classifier").item(0).getTextContent());
         }catch(Exception e){
@@ -130,51 +119,36 @@ public class UserAgent extends OurAgent
         }
     }
 
-    private ACLMessage initCoordinatorMsg() {
-        jade.util.leap.List coordinator = getFromDF("coordinator");
-        ACLMessage msg = null;
 
-        // If we have found some coordinator, send the initialization message
-        if (coordinator.size() > 0) {
-            CoordinatorAID = (AID) coordinator.get(0);
-            showMessage("Coordinator found: " + CoordinatorAID);
-
-            msg = new ACLMessage(ACLMessage.INFORM);
-            msg.addReceiver(CoordinatorAID);
-            msg.setSender(getAID());
-
-            int[] settings = new int[]{NumClassifiers, NumInstancesPerClassifier, NumTrainingInstancesPerClassifier,
-                    NumValidationInstancesPerClassifier, NumAttributesPerClassifier};
-            OurMessage content = new OurMessage("ini", settings);
-            try{
-                msg.setContentObject(content);
-            }catch(java.io.IOException e){
-                showMessage("ERROR while initializing coordinator: "+e.getMessage());
-            }
-
-        }else{showMessage("Could not find coordinator");}
-
-        return msg;
-    }
-
-
-    ///////////////////////////////////////////////////////////////// Training /////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////// Training and test /////////////////////////////////////////////////////////////////
     protected ACLMessage startTrainingOrTestMsg(String type, Instances dataset){
-        ACLMessage msg = new ACLMessage();
-        msg.addReceiver (CoordinatorAID);
-        msg.setPerformative(ACLMessage.REQUEST);
-        OurMessage content = new OurMessage(type, dataset);
+        ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+        msg.addReceiver(CoordinatorAID);
+
+        // Create content
+        OurMessage content;
+        Object[] args;
+        if (type.equals("train")){
+            args = new Object[2];
+            args[0] = dataset;
+            args[1] = new int[]{NumClassifiers, NumInstancesPerClassifier,
+                    NumValidationInstancesPerClassifier, NumAttributesPerClassifier};
+        }
+        else{
+            args = new Object[1];
+            args[0] = dataset;
+        }
+        content = new OurMessage(type, args);
+
+        // Set content and language
         try
         {
             msg.setContentObject(content);
             msg.setLanguage("JavaSerialization");
         } catch(Exception e){
-            showMessage("ERROR while creating dataset message:\n" + e.getMessage());
+            showErrorMessage("while creating dataset message:\n" + e.getMessage());
         }
+
         return msg;
     }
-
-
-    ///////////////////////////////////////////////////////////////// Test /////////////////////////////////////////////////////////////////
-    // TODO
 }

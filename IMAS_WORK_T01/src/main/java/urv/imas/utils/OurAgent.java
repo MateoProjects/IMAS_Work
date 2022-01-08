@@ -11,10 +11,16 @@ import jade.core.*;
 public class OurAgent extends Agent {
 
     ///////////////////////////////////////////////////////////////// Auxiliar methods /////////////////////////////////////////////////////////////////
-    public void showMessage(String mss) {
-        System.out.println(getLocalName()+" -> "+mss);
+    protected void showMessage(String text) {
+        System.out.println(getLocalName()+" -> "+text);
     }
 
+    protected void showErrorMessage(String text){
+        showMessage("ERROR: "+text);
+    }
+
+
+    ///////////////////////////////////////////////////////////////// Directory Facilitator /////////////////////////////////////////////////////////////////
     protected void RegisterInDF(String type){
         DFAgentDescription dfd = new DFAgentDescription();
         dfd.setName(getAID());
@@ -27,7 +33,7 @@ public class OurAgent extends Agent {
             DFService.register(this, dfd);
             showMessage("Registered at DF");
         } catch (FIPAException e) {
-            showMessage("ERROR registering at DF: "+e.getMessage());
+            showErrorMessage("registering at DF: "+e.getMessage());
         }
     }
 
@@ -47,5 +53,18 @@ public class OurAgent extends Agent {
             showMessage("ERROR searching "+type+" at DF: "+e.getMessage());
         }
         return agents;
+    }
+
+    protected AID blockingGetFromDF(String type){
+        AID id = null;
+        jade.util.leap.List agents;
+
+        while(id == null){
+            agents = getFromDF(type);
+            if(agents.size() > 0)
+                id = (AID) agents.get(0);
+        }
+
+        return id;
     }
 }

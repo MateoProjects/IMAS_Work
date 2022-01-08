@@ -36,15 +36,13 @@ import java.util.stream.IntStream;
 public class CoordinatorAgent extends OurAgent
 {
     // Settings
-    private AID UserAID = null;
     private int NumClassifiers;
     private int NumInstancesPerClassifier;
-    private int NumTrainingInstancesPerClassifier;
     private int NumValidationInstancesPerClassifier;
     private int NumAttributesPerClassifier;
     private int NumAttributesDataset;
 
-    private List <AID> classifiersAIDs;
+    private List <AID> ClassifiersAIDs;
     private Instances TrainDataset;
     private Instances TestDataset;
     private List<Attribute> [] classifiersAttributes;
@@ -57,87 +55,60 @@ public class CoordinatorAgent extends OurAgent
     protected void setup() {
         RegisterInDF("coordinator");
 
-        classifiersAIDs = new LinkedList<AID>();
-
-        // Create the sequential behaviour for the agent life
-        addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.INFORM),
-                "Initialization phase","INIT-PHASE", this::initCallback));
-
-
-        SequentialBehaviour sb = new SequentialBehaviour();
-        sb.addSubBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-                "Training phase","TRAIN-PHASE", this::workingCallback));
-        //sb.addSubBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-          //      "Test phase", (x)->{return ¿?workingCallback(x);}, true));
-
-        addBehaviour(sb);
+        // Create the behaviour for the agent life
+        addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
+                "Training and test phase","TRAIN-PHASE", this::workingCallback));
     }
 
 
-    ///////////////////////////////////////////////////////////////// Initialization behaviour /////////////////////////////////////////////////////////////////
-    protected ACLMessage initCallback(ACLMessage msg){
+    ///////////////////////////////////////////////////////////////// Working behaviour /////////////////////////////////////////////////////////////////
+    protected ACLMessage workingCallback(ACLMessage msg){
         ACLMessage reply = msg.createReply();
         reply.setPerformative(ACLMessage.INFORM);
+        try {
+            OurMessage content = (OurMessage) msg.getContentObject();
+            String type = content.name;
+            Object[] args = (Object[])content.obj;
+            Instances dataset = (Instances)args[0];
 
-        if (msg.getContent() != null) {
-            AID sender = msg.getSender();
-            ///// INITIALIZATION RESPONSE /////
-            if (msg.getConversationId()=="INIT-PHASE" && sender.getLocalName().equals("user")) {
-                reply.setContent("Correct initialization.");
-                // If first message, create the required amount of classifiers
-                if (UserAID == null) {
-                    UserAID = sender;
-                    // Get settings
-                    try {
-                        OurMessage content = (OurMessage) msg.getContentObject();
-                        int[] settings = (int[]) content.obj;
-                        NumClassifiers = settings[0];
-                        NumInstancesPerClassifier = settings[1];
-                        NumTrainingInstancesPerClassifier = settings[2];
-                        NumValidationInstancesPerClassifier = settings[3];
-                        NumAttributesPerClassifier = settings[4];
-
-                        // Create classifiers
-                        createClassifiers();
-                    } catch (UnreadableException e) {
-                        showMessage("ERROR while receiving User initialization: " + e.getMessage());
-                    }
-                } else {
-                    showMessage("User was already registered");
-                }
-            ///// INIT ERROR RESPONSE /////
-            } else if (msg.getConversationId()=="INIT-PHASE" && !sender.getLocalName().equals("user"))
-            {
-                showMessage("Initialization can only be started by the user.");
+            // Start training or test
+            if (type.equals("train")){
+                initialization(args[1]);
+                train(dataset);
+                reply.setContent("Training done");
             }
-            ///// TRAINING RESPONSE /////
-            else if (msg.getConversationId()=="TRAIN-PHASE")
-            {
-                showMessage("We are in training");
+            else if (type.equals("test")){
+                double[] predictions = test(dataset);
+                reply.setContentObject(predictions);
             }
-            ///// TESTING RESPONSE /////
-            else if (msg.getConversationId()=="TEST-PHASE")
-            {
-                showMessage("NOT YET IMPLEMENTED");
+            else{
+                String errorMsg = "Request type "+type+" unknown";
+                reply.setPerformative(ACLMessage.FAILURE);
+                reply.setContent(errorMsg);
+                showErrorMessage(errorMsg);
             }
-            ///// NO MATCHING ID RESPONSE /////
-            else {
-                showMessage("Was not expecting any other conversation.");
-                try {
-                    showMessage(msg.getContentObject().toString());
-                } catch (UnreadableException e) {
-                    e.printStackTrace();
-                }
-            }
-
-        }else{
-            reply.setContent("Content was empty");
-            showMessage("Message was empty!");
+        } catch (Exception e) {
+            String errorMsg = "Could not read the message "+msg.toString()+" due to exception:\n"+e.getMessage();
+            reply.setPerformative(ACLMessage.FAILURE);
+            reply.setContent(errorMsg);
+            showErrorMessage(errorMsg);
         }
 
         return reply;
     }
 
+
+    protected void initialization(Object args){
+        int[] settings = (int[])args;
+        NumClassifiers = settings[0];
+        NumInstancesPerClassifier = settings[1];
+        NumValidationInstancesPerClassifier = settings[2];
+        NumAttributesPerClassifier = settings[3];
+
+        createClassifiers();
+
+        getClassifiersAIDs();
+    }
 
     // Reference from the virtual campus: https://campusvirtual.urv.cat/mod/page/view.php?id=2931726 (modified for creating agents in the current container)
     protected void createClassifiers(){
@@ -164,50 +135,22 @@ public class CoordinatorAgent extends OurAgent
         }
     }
 
+    private void getClassifiersAIDs() {
+        ClassifiersAIDs = new LinkedList<AID>();
 
-    ///////////////////////////////////////////////////////////////// Working behaviour /////////////////////////////////////////////////////////////////
-    protected ACLMessage workingCallback(ACLMessage msg){
-        ACLMessage reply = null;
-        if (msg != null) {
-            if (msg.getConversationId().equals("TRAIN-PHASE") || msg.getConversationId().equals("TEST-PHASE") )
-            {
-                try {
-                    OurMessage content = (OurMessage) msg.getContentObject();
-                    String type = content.name;
-                    Instances dataset = (Instances)content.obj;
+        jade.util.leap.List classifiers;
+        do{
+            classifiers = getFromDF("classifier");
+        }while(classifiers.size() < NumClassifiers);
+        showMessage("There are "+classifiers.size()+" agents for training");
 
-                    // Start training or test
-                    if (type.equals("train")){
-                        train(dataset);
-                    }
-                    else if (type.equals("test")){
-                        ArrayList<Integer> predictions = test(dataset);
-                    }
-
-                    // TODO: Prepare answer message
-
-                } catch (UnreadableException e) {
-                    e.printStackTrace();
-                    showMessage("Could not read message");
-                }
-            } else showMessage("Was not expecting any other conversation");
-            reply = msg.createReply();
-            reply.setPerformative(ACLMessage.INFORM);
-            reply.setContent("Dataset received.");
-        }else{
-            showMessage("Message was empty!");
-        }
-        return reply;
+        for(int c=0; c < classifiers.size(); c++)
+            ClassifiersAIDs.add((AID) classifiers.get(c));
     }
 
+
     protected void train(Instances dataset){
-        jade.util.leap.List classifiers = getFromDF("classifier");
-        showMessage("There are "+classifiers.size()+" agents for training");
-        for(int c=0; c < classifiers.size(); c++)
-        {
-            classifiersAIDs.add((AID) classifiers.get(c));
-        }
-        // Create the sequential behaviour for the agent life
+        // Create the parallel behaviour for classifier creation
         ParallelBehaviour pb = new ParallelBehaviour();
 
         showMessage("Starting train");
@@ -215,7 +158,7 @@ public class CoordinatorAgent extends OurAgent
         //BE CAREFUL WITH -1, IF WE REMOVE THE CLASS LATER WE SHOULD REMOVE IT HERE TOO
         NumAttributesDataset = dataset.numAttributes()-1;
 
-        Random random = new Random(42);
+        Random rng = new Random(42);
         classifiersAttributes = new List[NumClassifiers];
         classifiersAttributesInteger = new List[NumClassifiers];
         classifiersInstances = new Instances[NumClassifiers];
@@ -230,6 +173,7 @@ public class CoordinatorAgent extends OurAgent
 
         // SELECT INDICES IN A WAY THAT EVERY ONE IS SELECTED AT LEAST ONCE. THEN IS RANDOM
         for(int c=0; c < NumClassifiers; c++) {
+            // Get selected attributes indexes
             if (start == attributes.size() - 1) {
                 Collections.shuffle(attributesIndexes);
                 classifiersAttributesInteger[c] = attributesIndexes.subList(0, NumAttributesPerClassifier);
@@ -243,44 +187,29 @@ public class CoordinatorAgent extends OurAgent
                 }
             }
             classifiersAttributes[c] = classifiersAttributesInteger[c].stream().map(attributes::get).collect(Collectors.toList());
-
-            dataset.randomize(random);
+            dataset.randomize(rng);
             classifiersInstances[c] = new Instances(dataset, 0, NumInstancesPerClassifier);
             classifiersInstances[c].setClassIndex(classifiersInstances[c].numAttributes() - 1);
             classifiersInstances[c] = deleteAttributes(classifiersInstances[c],classifiersAttributesInteger[c]);
 
-
             // Send training to classifier
             ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-            msg.addReceiver (classifiersAIDs.get(c));
-            OurMessage content = new OurMessage("train",  classifiersInstances[c]);
+            msg.addReceiver (ClassifiersAIDs.get(c));
+            Object[] cont = new Object[2];
+            cont[0] = classifiersInstances[c];
+            cont[1] = NumValidationInstancesPerClassifier;
+            OurMessage content = new OurMessage("train",  cont);
             try
             {
                 msg.setContentObject(content);
                 msg.setLanguage("JavaSerialization");
             } catch(Exception e){
-                showMessage("ERROR while creating dataset message:\n" + e.getMessage());
+                showErrorMessage("while creating dataset message:\n" + e.getMessage());
             }
-            ACLMessage trainDatasetMsg = msg;
-            pb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase for classifier " + c, "TRAIN-PHASE",(this::printResults)));
+
+            pb.addSubBehaviour(new OurRequestInitiator(this, msg, "Training phase for classifier " + c, "TRAIN-PHASE",(this::printResults)));
         }
         addBehaviour(pb);
-    }
-
-    private void printResults(ACLMessage msg)
-    {
-        try {
-            double accuracy  = (double) msg.getContentObject();
-            showMessage("Predictions for " + msg.getSender().getLocalName() + ": "+ accuracy);
-        } catch (UnreadableException e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    private void setValidationAccuracies(int c, Instances predictions)
-    {
-
     }
 
     private Instances deleteAttributes(Instances classifiersInstances,List<Integer> classifierAttributes)
@@ -298,10 +227,20 @@ public class CoordinatorAgent extends OurAgent
         return classifiersInstances;
     }
 
-    protected ArrayList<Integer> test(Instances dataset){
+    private void printResults(ACLMessage msg){
+        try {
+            double accuracy  = (double) msg.getContentObject();
+            showMessage("Predictions for " + msg.getSender().getLocalName() + ": "+ accuracy);
+        } catch (UnreadableException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    protected double[] test(Instances dataset){
         showMessage("Starting test");
-        ArrayList<Integer> results = new ArrayList<Integer>(TestDataset.numInstances());
         TestDataset = dataset;
+        double[] results = new double[TestDataset.numInstances()];
 
         return results;
     }
