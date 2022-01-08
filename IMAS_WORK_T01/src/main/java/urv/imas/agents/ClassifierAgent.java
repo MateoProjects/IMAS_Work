@@ -12,11 +12,11 @@ import weka.core.*;
 
 
 
-/** Inner class QueryInitiator.
+/** Inner class OurAgent.
  * This class implements the behaviour used by the ClassifierAgent to send a
  * REQUEST message to the CoordinatorAgent.
- * @author Anna Garriga Ramon Mateo
- * @version  $Date: 2010-04-08 13:08:55 +0200 (gio, 08 apr 2010) $ $Revision: 6297 $
+ * @author Anna Garriga & Ramon Mateo
+ * @version  $Date: 2022-01-08 
  * */
 public class ClassifierAgent extends OurAgent
 {
@@ -53,6 +53,7 @@ public class ClassifierAgent extends OurAgent
      * @param trainingData The training data.
      * @return The J48 classifier.
      */
+
     public Classifier createClassifier(Instances trainingData) {
 
         try {
@@ -83,6 +84,12 @@ public class ClassifierAgent extends OurAgent
         return val;
     }
 
+    /**
+     * Evaluate the classifier.
+     * @param testData The test data.
+     * @return The evaluation.
+     */
+
     private double[] classifyInstances(Instances testing){
         int iterations = testing.numInstances();
         double[] predictions = new double[iterations];
@@ -94,6 +101,13 @@ public class ClassifierAgent extends OurAgent
         return predictions;
 
     }
+
+    /**
+     * Compute the accuracy of the classifier.
+     * @param predictions The predictions that classifier does.
+     * @param testing The test data.
+     * @return The accuracy. 
+     */
     
     private double computeAccuracy(double[] predictions, Instances test_dataset){
         double correct = 0;
@@ -104,6 +118,11 @@ public class ClassifierAgent extends OurAgent
         }
         return correct/predictions.length;
     }
+
+    /**
+     * Prepare response. Receive message from coordinator agent and return results
+     * @param request The request message.
+     */
 
     protected ACLMessage prepareResponse (ACLMessage msg) {
         ACLMessage reply = msg.createReply();
@@ -118,13 +137,12 @@ public class ClassifierAgent extends OurAgent
 
                 // Start training or test
                 if (type.equals("train")){
-                    // Split into training and validation (https://www.programcreek.com/java-api-examples/?api=weka.filters.Filter Example 3)
                     int iniIdx = 0;
-                    int amount = 225;
-                    Instances trainDataset = new Instances(dataset, iniIdx, amount);
+                    int amountTraining = dataset.numInstances() * 0.75;
+                    Instances trainDataset = new Instances(dataset, iniIdx, amountTraining);
                     iniIdx = iniIdx + amount;
-                    amount = 75;
-                    Instances testDataset = new Instances(dataset, iniIdx, amount);
+                    int amountTest = dataset.numInstances() - amountTraining;
+                    Instances testDataset = new Instances(dataset, iniIdx, amountTest);
                     createClassifier(trainDataset);
                     eval = new Evaluation(testDataset);
                     double[] predictions = eval.evaluateModel(classifier, testDataset);
