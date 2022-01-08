@@ -147,13 +147,12 @@ public class ClassifierAgent extends OurAgent
 
                 // Start training or test
                 if (type.equals("train")){
-                    // Split into training and validation (https://www.programcreek.com/java-api-examples/?api=weka.filters.Filter Example 3)
                     int iniIdx = 0;
-                    int amount = 225;
-                    Instances trainDataset = new Instances(dataset, iniIdx, amount);
+                    int amountTraining = dataset.numInstances() * 0.75;
+                    Instances trainDataset = new Instances(dataset, iniIdx, amountTraining);
                     iniIdx = iniIdx + amount;
-                    amount = 75;
-                    Instances testDataset = new Instances(dataset, iniIdx, amount);
+                    int amountTest = dataset.numInstances() - amountTraining;
+                    Instances testDataset = new Instances(dataset, iniIdx, amountTest);
                     createClassifier(trainDataset);
                     eval = new Evaluation(testDataset);
                     double[] predictions = eval.evaluateModel(classifier, testDataset);
