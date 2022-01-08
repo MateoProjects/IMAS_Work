@@ -23,11 +23,11 @@ import weka.core.*;
 
 
 
-/** Inner class QueryInitiator.
+/** Inner class OurAgent.
  * This class implements the behaviour used by the ClassifierAgent to send a
  * REQUEST message to the CoordinatorAgent.
- * @author Anna Garriga Ramon Mateo
- * @version  $Date: 2010-04-08 13:08:55 +0200 (gio, 08 apr 2010) $ $Revision: 6297 $
+ * @author Anna Garriga & Ramon Mateo
+ * @version  $Date: 2022-01-08 
  * */
 public class ClassifierAgent extends OurAgent
 {
@@ -64,7 +64,7 @@ public class ClassifierAgent extends OurAgent
      * @param trainingData The training data.
      * @return The J48 classifier.
      */
-    public Classifier createClassifier(Instances trainingData) { //TODO: fer l'split
+    public Classifier createClassifier(Instances trainingData) { 
 
         try {
             // Create the classifier
@@ -94,6 +94,12 @@ public class ClassifierAgent extends OurAgent
         return val;
     }
 
+    /**
+     * Evaluate the classifier.
+     * @param testData The test data.
+     * @return The evaluation.
+     */
+
     private double[] classifyInstances(Instances testing){
         int iterations = testing.numInstances();
         double[] predictions = new double[iterations];
@@ -105,6 +111,13 @@ public class ClassifierAgent extends OurAgent
         return predictions;
 
     }
+
+    /**
+     * Compute the accuracy of the classifier.
+     * @param predictions The predictions that classifier does.
+     * @param testing The test data.
+     * @return The accuracy. 
+     */
     
     private double computeAcuracy(double[] predictions, Instances test_dataset){
         double correct = 0;
@@ -115,6 +128,11 @@ public class ClassifierAgent extends OurAgent
         }
         return correct/predictions.length;
     }
+
+    /**
+     * Prepare response. Receive message from coordinator agent and return results
+     * @param request The request message.
+     */
 
     protected ACLMessage prepareResponse (ACLMessage msg) {
         ACLMessage reply = msg.createReply();
