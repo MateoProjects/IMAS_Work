@@ -2,13 +2,10 @@ package urv.imas.agents;
 
 import urv.imas.utils.*;
 
-import jade.core.Agent;
 import jade.core.AID;
 import jade.core.behaviours.SequentialBehaviour;
 import jade.lang.acl.ACLMessage;
-import jade.proto.AchieveREInitiator;
 
-import jade.proto.ContractNetInitiator;
 import urv.imas.utils.OurMessage;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
@@ -26,9 +23,8 @@ import java.util.Random;
 public class UserAgent extends OurAgent
 {
     // Predefined settings
-    private static String ResourcesFolderPath = "./src/main/resources";
-    private static String SettingsFileName = "settings.xml";
-    private static String CoordName = "coordinator";
+    private static final String ResourcesFolderPath = "./src/main/resources";
+    private static final String SettingsFileName = "settings.xml";
 
     // Settings
     private String DatasetFileName;
@@ -66,10 +62,11 @@ public class UserAgent extends OurAgent
 
         // Create the sequential behaviour for the agent life
         SequentialBehaviour sb = new SequentialBehaviour();
+
         // Training phase
         ACLMessage trainDatasetMsg = startTrainingOrTestMsg("train", TrainDataset);
-        //trainDatasetMsg.setConversationId("TRAIN-PHASE");
-        sb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase", "TRAIN-PHASE"));
+        sb.addSubBehaviour(new OurRequestInitiator(this, trainDatasetMsg, "Training phase"));
+
         // Testing phase
         //ACLMessage testDatasetMsg = startTrainingOrTestMsg("test", TestDataset);
         //sb.addSubBehaviour(new OurRequestInitiator(this, testDatasetMsg, "Testing phase"));
@@ -134,9 +131,12 @@ public class UserAgent extends OurAgent
             args[1] = new int[]{NumClassifiers, NumInstancesPerClassifier,
                     NumValidationInstancesPerClassifier, NumAttributesPerClassifier};
         }
-        else{
+        else if (type.equals("test")){
             args = new Object[1];
             args[0] = dataset;
+        } else {
+            showErrorMessage("Unknown type: " + type);
+            args = null;
         }
         content = new OurMessage(type, args);
 

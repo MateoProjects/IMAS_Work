@@ -1,44 +1,42 @@
 package urv.imas.utils;
 
-import urv.imas.utils.*;
 import jade.proto.AchieveREInitiator;
 import jade.lang.acl.ACLMessage;
+
+import java.util.Objects;
 import java.util.function.*;
 
 
 public class OurRequestInitiator extends AchieveREInitiator{
     private OurAgent agent;
     private String taskName;
-    private String conversationID;
     private Consumer<ACLMessage> callback;
 
-    public OurRequestInitiator(OurAgent myAgent, ACLMessage request, String taskName, String conversationID, Consumer<ACLMessage> callback)
+    public OurRequestInitiator(OurAgent myAgent, ACLMessage request, String taskName, Consumer<ACLMessage> callback)
     {
         super(myAgent, request);
         this.agent = myAgent;
         this.taskName = taskName;
-        this.conversationID = conversationID;
         this.callback = callback;
     }
-    public OurRequestInitiator(OurAgent myAgent, ACLMessage request, String taskName, String conversationID)
+    public OurRequestInitiator(OurAgent myAgent, ACLMessage request, String taskName)
     {
         super(myAgent, request);
         this.agent = myAgent;
         this.taskName = taskName;
-        this.conversationID = conversationID;
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        if (taskName != "")
+        if (!Objects.equals(taskName, ""))
             agent.showMessage("Starting ["+taskName+"] (initiator).");
     }
 
     @Override
     public int onEnd(){
         int result = super.onEnd();
-        if (taskName != "")
+        if (!Objects.equals(taskName, ""))
             agent.showMessage("["+taskName+"] ended (initiator).");
         return result;
     }

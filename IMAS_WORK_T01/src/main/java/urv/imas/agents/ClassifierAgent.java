@@ -36,47 +36,50 @@ public class ClassifierAgent extends OurAgent
         CoordinatorAID = blockingGetFromDF("coordinator");
 
         addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-                "Training and test phase","TRAIN-PHASE", this::prepareResponse));
+                "Training and test phase", this::prepareResponse));
     }
 
 
     ///////////////////////////////////////////////////////////////// Working behaviour /////////////////////////////////////////////////////////////////
     /**
      * Prepare response. Receive message from coordinator agent and return results
-     * @param request The request message.
+     * @param msg The request message.
      */
     protected ACLMessage prepareResponse (ACLMessage msg) {
         ACLMessage reply = msg.createReply();
         reply.setPerformative(ACLMessage.INFORM);
 
-        try {
-            OurMessage content = (OurMessage) msg.getContentObject();
-            String type = content.name;
-            Object[] args = (Object[])content.obj;
-            Instances dataset = (Instances)args[0];
+        if (msg.getSender() != CoordinatorAID) {
+            try {
+                OurMessage content = (OurMessage) msg.getContentObject();
+                String type = content.name;
+                Object[] args = (Object[]) content.obj;
+                Instances dataset = (Instances) args[0];
 
-            // Start training or test
-            if (type.equals("train")){
-                double accuracy = train(dataset, args);
+                // Start training or test
+                if (type.equals("train")) {
+                    double accuracy = train(dataset, args);
 
-                // Set answer
-                reply.setContentObject(accuracy);
-                reply.setConversationId("TRAIN-PHASE");
-            }
-            else if (type.equals("test")){
-                double[] results = predict(dataset);
-                reply.setContentObject(results);
-                reply.setConversationId("TEST-PHASE");
-            }
-            else{
-                String errorMessage = "Type ["+type+"] is unknown";
+                    // Set answer
+                    reply.setContentObject(accuracy);
+                } else if (type.equals("test")) {
+                    double[] results = predict(dataset);
+                    reply.setContentObject(results);
+                } else {
+                    String errorMessage = "Type [" + type + "] is unknown";
+                    reply.setPerformative(ACLMessage.FAILURE);
+                    showErrorMessage(errorMessage);
+                    reply.setContent(errorMessage);
+                }
+
+            } catch (Exception e) {
+                String errorMessage = "Exception " + e.getMessage();
                 reply.setPerformative(ACLMessage.FAILURE);
                 showErrorMessage(errorMessage);
                 reply.setContent(errorMessage);
             }
-
-        } catch (Exception e) {
-            String errorMessage = "Exception "+e.getMessage();
+        } else {
+            String errorMessage = "AID not recognised";
             reply.setPerformative(ACLMessage.FAILURE);
             showErrorMessage(errorMessage);
             reply.setContent(errorMessage);
@@ -87,7 +90,7 @@ public class ClassifierAgent extends OurAgent
 
 
     private double train(Instances dataset, Object[] args) throws Exception{
-        // Split into trianing and validation
+        // Split into training and validation
         int numValidationInstances = (int)args[1];
         int iniIdx = 0;
         int amountTraining = dataset.numInstances() - numValidationInstances;
@@ -108,9 +111,8 @@ public class ClassifierAgent extends OurAgent
     /**
      * This method create a weka J48 classifier and train it with the training data.
      * @param trainingData The training data.
-     * @return The J48 classifier.
      */
-    public Classifier createClassifier(Instances trainingData) {
+    protected void createClassifier(Instances trainingData) {
 
         try {
             // Create the classifier
@@ -120,8 +122,6 @@ public class ClassifierAgent extends OurAgent
         } catch (Exception e) {
             System.err.println("Error creating classifier: " + e.getMessage());
         }
-
-        return classifier;
     }
 
 

@@ -7,14 +7,8 @@ import jade.core.behaviours.*;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.lang.acl.UnreadableException;
-import jade.proto.AchieveREInitiator;
-import jade.proto.AchieveREResponder;
-import jade.proto.ContractNetInitiator;
-import jade.domain.FIPANames;
-import jade.proto.ContractNetResponder;
 import jade.wrapper.AgentController;
 import weka.core.Attribute;
-import weka.core.Instance;
 import weka.core.Instances;
 
 import java.util.*;
@@ -48,7 +42,6 @@ public class CoordinatorAgent extends OurAgent
     private List<Attribute> [] classifiersAttributes;
     private List<Integer> [] classifiersAttributesInteger;
     private Instances [] classifiersInstances;
-    private ACLMessage UserReply;
 
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
@@ -57,7 +50,7 @@ public class CoordinatorAgent extends OurAgent
 
         // Create the behaviour for the agent life
         addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-                "Training and test phase","TRAIN-PHASE", this::workingCallback));
+                "Training and test phase", this::workingCallback));
     }
 
 
@@ -88,7 +81,7 @@ public class CoordinatorAgent extends OurAgent
                 showErrorMessage(errorMsg);
             }
         } catch (Exception e) {
-            String errorMsg = "Could not read the message "+msg.toString()+" due to exception:\n"+e.getMessage();
+            String errorMsg = "Could not read the message "+msg+" due to exception:\n"+e.getMessage();
             reply.setPerformative(ACLMessage.FAILURE);
             reply.setContent(errorMsg);
             showErrorMessage(errorMsg);
@@ -119,24 +112,23 @@ public class CoordinatorAgent extends OurAgent
         arguments[0] = getLocalName();
 
         jade.wrapper.AgentContainer containerController = getContainerController();  // Get current container
-        AgentController agentController = null;
+        AgentController agentController;
         try{
 
             for (int i = 0; i < NumClassifiers; i++){
                 classifierName = "classifier"+i;
-                // TODO: arguments[1] = attributes Compute attributes to use by this classifier and add to arguments
                 agentController = containerController.createNewAgent(classifierName, className, arguments);
                 agentController.start();
             }
             TimeUnit.SECONDS.sleep(1);
 
         }catch (Exception e){
-            showMessage("ERROR while creating classifier "+classifierName+"\n"+e.getMessage());
+            showErrorMessage("while creating classifier "+classifierName+"\n"+e.getMessage());
         }
     }
 
     private void getClassifiersAIDs() {
-        ClassifiersAIDs = new LinkedList<AID>();
+        ClassifiersAIDs = new LinkedList<>();
 
         jade.util.leap.List classifiers;
         do{
@@ -207,7 +199,7 @@ public class CoordinatorAgent extends OurAgent
                 showErrorMessage("while creating dataset message:\n" + e.getMessage());
             }
 
-            pb.addSubBehaviour(new OurRequestInitiator(this, msg, "Training phase for classifier " + c, "TRAIN-PHASE",(this::printResults)));
+            pb.addSubBehaviour(new OurRequestInitiator(this, msg, "Training phase for classifier " + c,(this::printResults)));
         }
         addBehaviour(pb);
     }
