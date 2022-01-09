@@ -6,6 +6,7 @@ import jade.core.AID;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
+import weka.classifiers.trees.J48;
 import weka.classifiers.*;
 import weka.core.*;
 
@@ -21,8 +22,8 @@ import java.util.*;
 public class ClassifierAgent extends OurAgent
 {
     private AID CoordinatorAID;
-    protected Classifier classifier = null;
-    protected Evaluation eval = null;
+    protected J48 Tree = null;
+    protected Evaluation Eval = null;
 
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
@@ -36,7 +37,7 @@ public class ClassifierAgent extends OurAgent
         CoordinatorAID = blockingGetFromDF("coordinator");
 
         addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-                "Training and test phase", this::prepareResponse));
+                this::prepareResponse));
     }
 
 
@@ -62,7 +63,6 @@ public class ClassifierAgent extends OurAgent
                 Instances dataset = (Instances) args[0];
                 int numValidationInstances = (int)args[1];
                 double accuracy = train(dataset, numValidationInstances);
-                System.out.println("Graph for classifier: " + classifier.graph())
                 reply.setContentObject(accuracy);
             } else if (type.equals("test")) {
                 List<Instances> instances = (List<Instances>)args[0];
@@ -94,10 +94,11 @@ public class ClassifierAgent extends OurAgent
 
         // Perform training
         createClassifier(trainDataset);
+        //showMessage("Obtained classifier:\n" + Tree.graph());
 
         // Perform evaluation
-        eval = new Evaluation(validationDataset);
-        double[] predictions = eval.evaluateModel(classifier, validationDataset);
+        Eval = new Evaluation(validationDataset);
+        double[] predictions = Eval.evaluateModel(Tree, validationDataset);
 
         return computeAccuracy(predictions, validationDataset);
     }
@@ -110,11 +111,11 @@ public class ClassifierAgent extends OurAgent
 
         try {
             // Create the classifier
-            classifier = new weka.classifiers.trees.J48();
+            Tree = new weka.classifiers.trees.J48();
             // Train the classifier
-            classifier.buildClassifier(trainingData);
+            Tree.buildClassifier(trainingData);
         } catch (Exception e) {
-            System.err.println("Error creating classifier: " + e.getMessage());
+            showErrorMessage("creating classifier: " + e.getMessage());
         }
     }
 
@@ -159,7 +160,7 @@ public class ClassifierAgent extends OurAgent
     public double classifyInstance(Instance instance) {
         double val = -1;
         try{
-            val = this.classifier.classifyInstance(instance);
+            val = Tree.classifyInstance(instance);
         }catch (Exception e){
             showErrorMessage("while classifying instance: "+instance+" "+e.getMessage());
         }

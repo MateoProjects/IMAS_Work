@@ -19,26 +19,36 @@ public class OurRequestInitiator extends AchieveREInitiator{
         this.taskName = taskName;
         this.callback = callback;
     }
+    public OurRequestInitiator(OurAgent myAgent, ACLMessage request, Consumer<ACLMessage> callback)
+    {
+        super(myAgent, request);
+        this.agent = myAgent;
+        this.callback = callback;
+    }
     public OurRequestInitiator(OurAgent myAgent, ACLMessage request, String taskName)
     {
         super(myAgent, request);
         this.agent = myAgent;
         this.taskName = taskName;
     }
+    public OurRequestInitiator(OurAgent myAgent, ACLMessage request)
+    {
+        super(myAgent, request);
+        this.agent = myAgent;
+    }
 
     @Override
     public void onStart() {
+        if (taskName != null && !Objects.equals(taskName, ""))
+            agent.showMessage("Starting ["+taskName+"]");
         super.onStart();
-        if (!Objects.equals(taskName, ""))
-            agent.showMessage("Starting ["+taskName+"].");
     }
 
     @Override
     public int onEnd(){
-        int result = super.onEnd();
-        if (!Objects.equals(taskName, ""))
-            agent.showMessage("["+taskName+"] ended.");
-        return result;
+        if (taskName != null && !Objects.equals(taskName, ""))
+            agent.showMessage("["+taskName+"] ended");
+        return super.onEnd();
     }
 
     public String getSenderName(ACLMessage msg){

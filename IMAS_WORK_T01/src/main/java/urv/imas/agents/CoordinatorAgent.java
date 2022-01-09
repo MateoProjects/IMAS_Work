@@ -32,7 +32,6 @@ public class CoordinatorAgent extends OurAgent
     protected int NumAttributesDataset;
 
     protected AID[] ClassifiersAIDs;
-
     protected List<Attribute> [] ClassifiersAttributes;
     protected List<Integer> [] ClassifiersAttributesInteger;
     protected Instances [] ClassifiersDatasets;
@@ -227,7 +226,7 @@ public class CoordinatorAgent extends OurAgent
             msg = createOurMessageRequest(ClassifiersAIDs[c], "train", content);
 
 
-            trainingBhv.addSubBehaviour(new OurRequestInitiator(this, msg, "Training phase for classifier " + c,(this::trainingCallback)));
+            trainingBhv.addSubBehaviour(new OurRequestInitiator(this, msg, (this::trainingCallback)));
         }
         addBehaviour(trainingBhv);
     }
@@ -249,7 +248,7 @@ public class CoordinatorAgent extends OurAgent
             double accuracy = (double) msg.getContentObject();
             int idx = classifierNameToIdx(msg.getSender().getLocalName());
             ClassifiersPrecisions[idx] = accuracy;
-            showMessage("Accuracy for " + msg.getSender().getLocalName() + ": "+ accuracy);
+            showMessage(msg.getSender().getLocalName()+" finished training with an accuracy of "+ accuracy);
 
             // Check if
             NumTrainedClassifiers++;
@@ -326,7 +325,7 @@ public class CoordinatorAgent extends OurAgent
                 Object[] content = new Object[1];
                 content[0] = instsPerClassifier[c];
                 msg = createOurMessageRequest(ClassifiersAIDs[c], "test", content);
-                pb.addSubBehaviour(new OurRequestInitiator(this, msg, "Testing phase for classifier " + c,(this::testingCallback)));
+                pb.addSubBehaviour(new OurRequestInitiator(this, msg, (this::testingCallback)));
             }
         }
         addBehaviour(pb);
@@ -340,7 +339,7 @@ public class CoordinatorAgent extends OurAgent
             if(!desiredAttrs.contains(attr) && inst.classIndex() != (i-numDeleted))
             {
                 inst.deleteAttributeAt(i-numDeleted);
-                numDeleted++;    // To compensate
+                numDeleted++;    // To compensate removing
             }
         }
     }
@@ -350,7 +349,7 @@ public class CoordinatorAgent extends OurAgent
             String classifier_name = msg.getSender().getLocalName();
             int classifierIdx = classifierNameToIdx(classifier_name);
             double[] predictions  = (double[]) msg.getContentObject();
-            showMessage("A total of "+predictions.length+" have been received from "+classifier_name);
+            showMessage(classifier_name+" finished testing with a total of "+predictions.length+" predictions");
 
             // Accumulate WEIGHTED_PREDS = [((PREDICTIONS*2)-1)*VALIDATION_ACCURACY]
             int instanceIdx;
@@ -374,8 +373,10 @@ public class CoordinatorAgent extends OurAgent
                     TestingReply.setContentObject(TestingPredictions);
                     send(TestingReply);
                 }catch(Exception e){
+                    String errorMsg = "Exception during results gathering:"+e.getMessage();
+                    showErrorMessage(errorMsg);
                     TestingReply.setPerformative(ACLMessage.FAILURE);
-                    TestingReply.setContent("ERROR during results gathering: "+e.getMessage());
+                    TestingReply.setContent(errorMsg);
                     send(TestingReply);
                 }
                 showMessage("Testing completed");

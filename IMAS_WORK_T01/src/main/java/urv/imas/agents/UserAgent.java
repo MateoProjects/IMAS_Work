@@ -196,17 +196,17 @@ public class UserAgent extends OurAgent
     protected void testingCallback(ACLMessage msg){
         try{
             double [] content = (double []) msg.getContentObject();
-            showMessage("Predictions: " + Arrays.toString(content));
-            double acc = 0;
+            showMessage("Testing predictions: " + Arrays.toString(content));
+            double accuracy = 0;
             for (int i = 0; i < content.length; i++)
             {
-                acc += (OriginalTestDataset.get(i).classValue()==content[i]) ? 1 : 0;
+                accuracy += (OriginalTestDataset.get(i).classValue()==content[i]) ? 1 : 0;
             }
-            acc = acc / content.length;
-            showMessage("The overall accuracy is " + acc);
+            accuracy = accuracy / content.length;
+            showMessage("The overall testing accuracy is: " + accuracy);
 
         }catch(Exception e){
-            showErrorMessage("Problem at testing callback "+e.getMessage());
+            showErrorMessage("Problem at testing callback: "+e.getMessage());
         }
     }
 }

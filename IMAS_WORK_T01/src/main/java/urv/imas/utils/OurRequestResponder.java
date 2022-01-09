@@ -14,6 +14,14 @@ public class OurRequestResponder extends AchieveREResponder{
     private Function<ACLMessage, ACLMessage> computeResult;
     private boolean sendAgree;
 
+    public OurRequestResponder(OurAgent myAgent, MessageTemplate mt, String taskName, Function<ACLMessage, ACLMessage> computeResult, boolean sendAgree)
+    {
+        super(myAgent, mt);
+        this.agent = myAgent;
+        this.taskName = taskName;
+        this.computeResult = computeResult;
+        this.sendAgree = sendAgree;
+    }
     public OurRequestResponder(OurAgent myAgent, MessageTemplate mt, String taskName, Function<ACLMessage, ACLMessage> computeResult)
     {
         super(myAgent, mt);
@@ -22,20 +30,26 @@ public class OurRequestResponder extends AchieveREResponder{
         this.computeResult = computeResult;
         this.sendAgree = true;
     }
+    public OurRequestResponder(OurAgent myAgent, MessageTemplate mt, Function<ACLMessage, ACLMessage> computeResult)
+    {
+        super(myAgent, mt);
+        this.agent = myAgent;
+        this.computeResult = computeResult;
+        this.sendAgree = true;
+    }
 
     @Override
     public void onStart() {
+        if (taskName != null && !Objects.equals(taskName, ""))
+            agent.showMessage("Starting ["+taskName+"]");
         super.onStart();
-        if (!Objects.equals(taskName, ""))
-            agent.showMessage("Starting ["+taskName+"].");
     }
 
     @Override
     public int onEnd(){
-        int result = super.onEnd();
-        if (!Objects.equals(taskName, ""))
-            agent.showMessage("["+taskName+"] ended.");
-        return result;
+        if (taskName != null && !Objects.equals(taskName, ""))
+            agent.showMessage("["+taskName+"] ended");
+        return super.onEnd();
     }
 
     public String getSenderName(ACLMessage msg){
@@ -55,17 +69,17 @@ public class OurRequestResponder extends AchieveREResponder{
             reply.setPerformative(ACLMessage.AGREE);
         }
         else{
+            res += ", performing at agree...";
             reply = computeResult.apply(request);
         }
 
-        agent.showMessage(res);
+        //agent.showMessage(res);   // TODO: Check if this is necessary
         return reply;
     }
 
 
     @Override
     protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response){
-        //agent.showMessage("Preparing the result for "+getSenderName(request));    // Maybe remove this
         return computeResult.apply(request);
     }
 }
