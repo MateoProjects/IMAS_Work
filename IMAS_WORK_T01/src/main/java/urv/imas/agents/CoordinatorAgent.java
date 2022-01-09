@@ -10,12 +10,11 @@ import jade.lang.acl.UnreadableException;
 import jade.wrapper.AgentController;
 import weka.core.Attribute;
 import weka.core.Instances;
-import weka.core.Instance;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.concurrent.TimeUnit;
 
 
 
@@ -43,6 +42,7 @@ public class CoordinatorAgent extends OurAgent
     protected List<Attribute> [] ClassifiersAttributes;
     protected List<Integer> [] ClassifiersAttributesInteger;
     protected Instances [] ClassifiersDatasets;
+    protected List<Double> [] WeightedPredictions;
 
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
@@ -177,6 +177,7 @@ public class CoordinatorAgent extends OurAgent
         ClassifiersAttributes = new List[NumClassifiers];
         ClassifiersAttributesInteger = new List[NumClassifiers];
         ClassifiersDatasets = new Instances[NumClassifiers];
+        WeightedPredictions = new List[NumClassifiers];
 
         List<Attribute> attributes = Collections.list(dataset.enumerateAttributes());
         List<Integer> attributesIndexes = IntStream.range(0, NumAttributesDataset).boxed().collect(Collectors.toList());
@@ -190,6 +191,7 @@ public class CoordinatorAgent extends OurAgent
         Object[] content;
         Instances classifierDataset;
         for(int c=0; c < NumClassifiers; c++) {
+            WeightedPredictions[c] = new LinkedList<>();
             // Get selected attributes indexes
             if (start < attributes.size() - 1) {
                 ClassifiersAttributesInteger[c] = attributesIndexes.subList(start, end);
@@ -217,6 +219,7 @@ public class CoordinatorAgent extends OurAgent
             content[1] = NumValidationInstancesPerClassifier;
             msg = createOurMessageRequest(ClassifiersAIDs[c], "train", content);
 
+
             trainingBhv.addSubBehaviour(new OurRequestInitiator(this, msg, "Training phase for classifier " + c,(this::trainingCallback)));
         }
         addBehaviour(trainingBhv);
@@ -233,6 +236,7 @@ public class CoordinatorAgent extends OurAgent
     protected Instances filterAttributes(Instances dataset, List<Integer> desiredAttrsIdxs){
         int deleted = 0;
         int total = dataset.numAttributes();
+
         for (int i  = 0; i < total; i++)
             if (!desiredAttrsIdxs.contains(i) && dataset.classIndex() != (i-deleted))
             {
@@ -265,6 +269,7 @@ public class CoordinatorAgent extends OurAgent
 
     ///////////////////////////////////////////////////////////////// Test /////////////////////////////////////////////////////////////////
     protected double[] test(Instances[] testInstances){
+
         showMessage("Starting testing");
         double[] results = new double[testInstances.length];
         int c,i;
@@ -297,10 +302,9 @@ public class CoordinatorAgent extends OurAgent
             for(i=0; i < testInstances.length; i++) {
                 inst = new Instances(testInstances[i]);    // Create a copy
                 filterAttributes(inst, attrsPerInstance[i], classifierAttrs);
-                if (inst.numAttributes() == classifierAttrs.size()) // If contains all the attributes
+                if (inst.numAttributes() == classifierAttrs.size()+1) // If contains all the attributes
                     instsPerClassifier[c].add(inst);
             }
-
             // If there is an instance -> Create message and send test request
             if(instsPerClassifier[c].size() > 0){
                 Object[] content = new Object[1];
@@ -312,6 +316,19 @@ public class CoordinatorAgent extends OurAgent
         addBehaviour(pb);
 
         // TODO: Wait for the results
+        /*try {
+            TimeUnit.SECONDS.sleep(5);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }*/
+
+        /*for (int k = 0; k < NumClassifiers; k++)
+        {
+            showMessage("Weighted predictions for " + k);
+            showMessage(WeightedPredictions[k].toString());
+        }*/
+
+
 
         return results;
     }
@@ -321,7 +338,7 @@ public class CoordinatorAgent extends OurAgent
         int numDeleted = 0;
         for (int i=0; i < instAttrs.size(); i++){
             attr = instAttrs.get(i);
-            if(!desiredAttrs.contains(attr))
+            if(!desiredAttrs.contains(attr) && inst.classIndex() != (i-numDeleted))
             {
                 inst.deleteAttributeAt(i-numDeleted);
                 numDeleted++;    // To compensate
@@ -333,8 +350,19 @@ public class CoordinatorAgent extends OurAgent
 
     protected void testingCallback(ACLMessage msg){
         try {
+            String classifier_name = msg.getSender().getLocalName();
+            int classifier_ID = classifier_name.charAt(classifier_name.length()-1) - '0';
             double[] predictions  = (double[]) msg.getContentObject();
-            showMessage("A total of "+predictions.length+" have been received from "+msg.getSender().getLocalName());
+            showMessage("A total of "+predictions.length+" have been received from "+classifier_name);
+
+            // WEIGHTED_PREDS = [((PREDICTIONS*2)-1)*VALIDATION_ACCURACY]
+            for (int i = 0; i < predictions.length; i++)
+            {
+                Double res = (predictions[i]*2-1)*ClassifiersPrecisions[classifier_ID];
+                WeightedPredictions[classifier_ID].add(res);
+            }
+
+
         } catch (UnreadableException e) {
             showErrorMessage("Testing callback failed for message: "+msg);
         }

@@ -137,7 +137,7 @@ public class ClassifierAgent extends OurAgent
     ///////////////////////////////////////////////////////////////// Test /////////////////////////////////////////////////////////////////
     /**
      * Evaluate the classifier.
-     * @param testing The test data.
+     * @param instances The test data.
      * @return The evaluation.
      */
     private double[] test(List<Instances> instances){

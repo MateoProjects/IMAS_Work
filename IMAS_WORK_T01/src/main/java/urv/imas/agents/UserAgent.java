@@ -7,6 +7,7 @@ import jade.core.behaviours.SequentialBehaviour;
 import jade.lang.acl.ACLMessage;
 
 import urv.imas.utils.OurMessage;
+import weka.core.Attribute;
 import weka.core.Instances;
 import weka.core.Instance;
 import weka.core.DenseInstance;
@@ -119,6 +120,8 @@ public class UserAgent extends OurAgent
             amount = NumTestInstances;
             TestDataset = new Instances(Dataset, iniIdx, amount);
             TestDataset.deleteAttributeAt(TestDataset.numAttributes()-1);   // Delete class attribute
+            TestDataset.insertAttributeAt(new Attribute("class_label"), TestDataset.numAttributes());
+            TestDataset.setClassIndex(TestDataset.numAttributes()-1);
         }catch(Exception e){
             showMessage("ERROR while reading dataset:\n" + e.getMessage());
         }
@@ -162,6 +165,7 @@ public class UserAgent extends OurAgent
             filterAttributes(inst, attributesSublist);
 
             testInstances[i] = inst;
+
         }
 
         return testInstances;
@@ -171,11 +175,12 @@ public class UserAgent extends OurAgent
         int deleted = 0;
         int total = inst.numAttributes();
         for (int i  = 0; i < total; i++)
-            if (!desiredAttrs.contains(i))
+            if (!desiredAttrs.contains(i) && (i-deleted) != inst.classIndex())
             {
                 inst.deleteAttributeAt(i-deleted);
                 deleted += 1;
             }
+
         return inst;
     }
 }
