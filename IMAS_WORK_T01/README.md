@@ -10,8 +10,10 @@ In order to execute our project, first **Java 1.8 SDK** and **Maven** are requir
 After, a *mvn install* command need to be executed for building the project. At this moment, using the **pom.xml** file, *Maven* will be able to install the rest of
 required software, highlighting **JADE 4.5.0** and **Weka 3.8.5**.
 
-Once all dependencies are installed, the project can be executed with *Maven* using the **jade-classifiers** profile from the **pom.xml** file.
-All the notifications, results and errors will be displayed at terminal.
+Once all dependencies are installed, the project can be executed with *Maven* using the **jade-classifiers** profile from the **pom.xml** file 
+In other words, running *Maven* with the **exec:java -f pom.xml** command line and defining **jade-classifiers** as profile.
+This will perform the training and testing phases of our MAS, displaying at terminal all the notifications, results and errors.
+
 **IMPORTANT**: The configuration file file which defines the dataset, classifiers and more is **settings.xml** and is placed at **src/main/resources** along with the **audit_risk.arff** file.
 The configurations are the following:
 * **dataset_filename**: Filename of the dataset to use, which is placed also in the resources folder
