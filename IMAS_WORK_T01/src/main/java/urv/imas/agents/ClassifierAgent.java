@@ -160,7 +160,7 @@ public class ClassifierAgent extends OurAgent
         try{
             val = this.classifier.classifyInstance(instance);
         }catch (Exception e){
-            showMessage("ERROR while classifying instance: "+instance+" "+e.getMessage());
+            showErrorMessage("while classifying instance: "+instance+" "+e.getMessage());
         }
 
         return val;

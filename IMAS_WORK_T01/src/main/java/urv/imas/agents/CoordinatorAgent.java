@@ -308,12 +308,12 @@ public class CoordinatorAgent extends OurAgent
         Object[] cont;
         for(c=0; c < NumClassifiers; c++)
         {
-            // Get instances
+            // Get instances which match with classifier
             classifierAttrs = ClassifiersAttributes[c];
             for(i=0; i < testInstances.length; i++) {
                 inst = new Instances(testInstances[i]);    // Create a copy
                 filterAttributes(inst, attrsPerInstance[i], classifierAttrs);
-                if (inst.numAttributes() == classifierAttrs.size()+1)
+                if (inst.numAttributes() == classifierAttrs.size()+1) // +1 because of the class attribute
                 {
                     // If contains all the attributes
                     instsPerClassifier[c].add(inst);

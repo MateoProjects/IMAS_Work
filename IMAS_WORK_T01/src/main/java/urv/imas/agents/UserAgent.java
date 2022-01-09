@@ -123,17 +123,15 @@ public class UserAgent extends OurAgent
             OriginalTestDataset = new Instances(TestDataset);
             OriginalTestDataset.setClassIndex(TestDataset.classIndex());
 
+            // TODO: ACTUAL CLASS DELETION
+            /*
             TestDataset.setClassIndex(-1);
 
             TestDataset.deleteAttributeAt(TestDataset.numAttributes()-1);   // Delete class attribute
             TestDataset.insertAttributeAt(new Attribute("class_label"), TestDataset.numAttributes());
 
             TestDataset.setClassIndex(TestDataset.numAttributes()-1);
-
-            /*showMessage("Fucking dataset"); //TODO: DELETE
-            //showMessage(TestDataset.get(0).toString());
-            List<Attribute> ll = Collections.list(TestDataset.enumerateAttributes());
-            showMessage("Attributes: " + Arrays.toString(ll.toArray()));*/
+            */
 
         }catch(Exception e){
             showErrorMessage("while reading dataset:\n" + e.getMessage());
