@@ -12,7 +12,14 @@ import weka.core.*;
 
 import java.util.*;
 
-
+import java.awt.BorderLayout;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import weka.classifiers.*;
+import weka.classifiers.trees.J48;
+import weka.core.Instances;
+import weka.gui.treevisualizer.PlaceNode2;
+import weka.gui.treevisualizer.TreeVisualizer;
 
 /**
  * This agent implements the Classifier Agent that performs the training and testing requests from the coordinator.
@@ -94,12 +101,13 @@ public class ClassifierAgent extends OurAgent
 
         // Perform training
         createClassifier(trainDataset);
-        //showMessage("Obtained classifier:\n" + Tree.graph());
+        PlotClassifier();
 
         // Perform evaluation
         Eval = new Evaluation(validationDataset);
         double[] predictions = Eval.evaluateModel(Tree, validationDataset);
 
+        showMessage("Training completed");
         return computeAccuracy(predictions, validationDataset);
     }
 
@@ -107,7 +115,7 @@ public class ClassifierAgent extends OurAgent
      * This method create a weka J48 classifier and train it with the training data.
      * @param trainingData The training data.
      */
-    protected void createClassifier(Instances trainingData) {
+    protected void createClassifier(Instances trainingData) throws Exception{
 
         try {
             // Create the classifier
@@ -115,7 +123,7 @@ public class ClassifierAgent extends OurAgent
             // Train the classifier
             Tree.buildClassifier(trainingData);
         } catch (Exception e) {
-            showErrorMessage("creating classifier: " + e.getMessage());
+            throw new Exception("Problem creating classifier: " + e.getMessage());
         }
     }
 
@@ -135,6 +143,24 @@ public class ClassifierAgent extends OurAgent
     }
 
 
+    protected void PlotClassifier() throws Exception{
+        final javax.swing.JFrame jf =
+                new javax.swing.JFrame(getLocalName()+" tree");
+        jf.setSize(500,400);
+        jf.getContentPane().setLayout(new BorderLayout());
+        TreeVisualizer tv = new TreeVisualizer(null,
+                Tree.graph(),
+                new PlaceNode2());
+        jf.getContentPane().add(tv, BorderLayout.CENTER);
+        jf.addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                jf.dispose();
+            }
+        });
+        jf.setVisible(true);
+        tv.fitToScreen();
+    }
+
     ///////////////////////////////////////////////////////////////// Test /////////////////////////////////////////////////////////////////
     /**
      * Evaluate the classifier.
@@ -145,10 +171,10 @@ public class ClassifierAgent extends OurAgent
         showMessage("Starting testing");
         int numInstances = instances.size();
         double[] predictions = new double[numInstances];
-        for (int i=0; i<numInstances; i++){
+        for (int i=0; i<numInstances; i++)
             predictions[i] = classifyInstance(instances.get(i).get(0));
-        }
 
+        showMessage("Testing completed");
         return predictions;
     }
 

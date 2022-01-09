@@ -32,9 +32,9 @@ public class CoordinatorAgent extends OurAgent
     protected int NumAttributesDataset;
 
     protected AID[] ClassifiersAIDs;
-    protected List<Attribute> [] ClassifiersAttributes;
-    protected List<Integer> [] ClassifiersAttributesInteger;
-    protected Instances [] ClassifiersDatasets;
+    protected List<Attribute>[] ClassifiersAttributes;
+    protected List<Integer>[] ClassifiersAttributesInteger;
+    protected Instances[] ClassifiersDatasets;
     protected ACLMessage TrainingReply;
     protected double[] ClassifiersPrecisions;
     protected double[] ClassifiersWeights;
@@ -50,13 +50,9 @@ public class CoordinatorAgent extends OurAgent
     protected void setup() {
         RegisterInDF("coordinator");
 
-        // Set default parameters
-        NumClassifiers = 0;
-        NumTrainedClassifiers = 0;
-
         // Create the behaviour for the agent life
         addBehaviour(new OurRequestResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-                "Training and test phase", this::workingCallback));
+                this::workingCallback));
     }
 
 
@@ -102,18 +98,16 @@ public class CoordinatorAgent extends OurAgent
 
 
     ///////////////////////////////////////////////////////////////// Classifiers initialization /////////////////////////////////////////////////////////////////
-    protected void initialization(int[] settings){
+    protected void initialization(int[] settings) throws Exception{
         NumClassifiers = settings[0];
         NumInstancesPerClassifier = settings[1];
         NumValidationInstancesPerClassifier = settings[2];
         NumAttributesPerClassifier = settings[3];
 
         createClassifiers();
-
-        getClassifiersAIDs();
     }
 
-    protected void createClassifiers(){ // TODO: Adapt this for multiple calls
+    protected void createClassifiers() throws Exception{
         showMessage("Creating "+NumClassifiers+" classifiers");
 
         ClassifiersAIDs = new AID[NumClassifiers];
@@ -128,16 +122,18 @@ public class CoordinatorAgent extends OurAgent
         Object[] arguments = new Object[2];
         arguments[0] = getLocalName();
         try{
-
             for (int i = 0; i < NumClassifiers; i++){
                 classifierName = "classifier"+i;
                 agentController = containerController.createNewAgent(classifierName, className, arguments);
                 agentController.start();
             }
-
         }catch (Exception e){
-            showErrorMessage("while creating classifier "+classifierName+"\n"+e.getMessage());
+            getClassifiersAIDs();   // Detecte
+            throw new Exception("Problem while creating classifier "+classifierName+": "+e.getMessage());
         }
+
+        getClassifiersAIDs();
+        showMessage(NumClassifiers+" classifiers successfully created");
     }
 
     private void getClassifiersAIDs() {
@@ -145,11 +141,10 @@ public class CoordinatorAgent extends OurAgent
         do{
             classifiers = getFromDF("classifier");
         }while(classifiers.size() < NumClassifiers);
-        showMessage("There are "+classifiers.size()+" classifiers for training");
 
         AID classifier;
         int idx;
-        for(int c=0; c < classifiers.size(); c++){
+        for(int c=0; c < NumClassifiers; c++){
             classifier = (AID) classifiers.get(c);
             idx = classifierNameToIdx(classifier.getLocalName());
             ClassifiersAIDs[idx] = classifier;
@@ -248,7 +243,7 @@ public class CoordinatorAgent extends OurAgent
             double accuracy = (double) msg.getContentObject();
             int idx = classifierNameToIdx(msg.getSender().getLocalName());
             ClassifiersPrecisions[idx] = accuracy;
-            showMessage(msg.getSender().getLocalName()+" finished training with an accuracy of "+ accuracy);
+            showMessage(msg.getSender().getLocalName()+" finished training with a validation accuracy of "+ accuracy);
 
             // Check if
             NumTrainedClassifiers++;
@@ -265,7 +260,8 @@ public class CoordinatorAgent extends OurAgent
                 double avgAccuracy = totalAccuracy / ClassifiersPrecisions.length;
 
                 // Finally, send the reply
-                TrainingReply.setContent("Training completed by "+NumTrainedClassifiers+" classifiers with an average accuracy of "+avgAccuracy);
+                showMessage("Training completed");
+                TrainingReply.setContent("Training completed by "+NumTrainedClassifiers+" classifiers with an average validation accuracy of "+avgAccuracy);
                 send(TrainingReply);
             }
         } catch (UnreadableException e) {
@@ -277,6 +273,7 @@ public class CoordinatorAgent extends OurAgent
     ///////////////////////////////////////////////////////////////// Test /////////////////////////////////////////////////////////////////
     protected void test(Instances[] testInstances){
         showMessage("Starting testing");
+        NumTestedClassifiers = 0;
         TestingPredictions = new double[testInstances.length];
         int c,i;
 

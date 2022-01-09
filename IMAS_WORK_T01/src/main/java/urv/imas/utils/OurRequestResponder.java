@@ -61,19 +61,13 @@ public class OurRequestResponder extends AchieveREResponder{
     protected ACLMessage handleRequest (ACLMessage request) { //old prepareResponse()
         ACLMessage reply;
 
-        String res = getSenderName(request)+" requests a task";
-
         if(sendAgree){
-            res += ", sending agree...";
             reply = request.createReply();
             reply.setPerformative(ACLMessage.AGREE);
         }
-        else{
-            res += ", performing at agree...";
+        else
             reply = computeResult.apply(request);
-        }
 
-        //agent.showMessage(res);   // TODO: Check if this is necessary
         return reply;
     }
 

@@ -122,17 +122,6 @@ public class UserAgent extends OurAgent
 
             OriginalTestDataset = new Instances(TestDataset);
             OriginalTestDataset.setClassIndex(TestDataset.classIndex());
-
-            // TODO: ACTUAL CLASS DELETION
-            /*
-            TestDataset.setClassIndex(-1);
-
-            TestDataset.deleteAttributeAt(TestDataset.numAttributes()-1);   // Delete class attribute
-            TestDataset.insertAttributeAt(new Attribute("class_label"), TestDataset.numAttributes());
-
-            TestDataset.setClassIndex(TestDataset.numAttributes()-1);
-            */
-
         }catch(Exception e){
             showErrorMessage("while reading dataset:\n" + e.getMessage());
         }
@@ -195,16 +184,48 @@ public class UserAgent extends OurAgent
 
     protected void testingCallback(ACLMessage msg){
         try{
-            double [] content = (double []) msg.getContentObject();
-            showMessage("Testing predictions: " + Arrays.toString(content));
-            double accuracy = 0;
-            for (int i = 0; i < content.length; i++)
-            {
-                accuracy += (OriginalTestDataset.get(i).classValue()==content[i]) ? 1 : 0;
-            }
-            accuracy = accuracy / content.length;
-            showMessage("The overall testing accuracy is: " + accuracy);
+            double [] predictions = (double []) msg.getContentObject();
+            showMessage("Testing predictions: " + Arrays.toString(predictions));
 
+            double trueLabel;
+            double pred;
+            int truePositives = 0;
+            int falsePositives = 0;
+            int trueNegatives = 0;
+            int falseNegatives = 0;
+            for (int i = 0; i < predictions.length; i++)
+            {
+                pred = predictions[i];
+                trueLabel = OriginalTestDataset.get(i).classValue();
+                // If positive
+                if (pred == 1){
+                    if(pred == trueLabel)
+                        truePositives++;
+                    else
+                        falsePositives++;
+                }
+                // If negative
+                else if(pred == 0){
+                    if(pred == trueLabel)
+                        trueNegatives++;
+                    else
+                        falseNegatives++;
+                }
+                // Otherwise
+                else{
+                    falseNegatives++;
+                    showErrorMessage("Prediction value "+pred+" not understood");
+                }
+            }
+            double precision = truePositives / (double)(truePositives + falsePositives);
+            double recall = truePositives / (double)(truePositives + falseNegatives);
+            double f1 = 2 * (precision * recall) / (double)(precision + recall);
+            double accuracy = (truePositives + trueNegatives) / (double)(predictions.length);
+            showMessage("The testing results are:\n" +
+                    "\tAccuracy = " + accuracy+"\n" +
+                    "\tPrecision = " + precision+"\n" +
+                    "\tRecall = " + recall+"\n" +
+                    "\tF1 score = " + f1);
         }catch(Exception e){
             showErrorMessage("Problem at testing callback: "+e.getMessage());
         }
