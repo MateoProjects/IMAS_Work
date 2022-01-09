@@ -183,4 +183,12 @@ public class UserAgent extends OurAgent
 
         return inst;
     }
+
+    protected void testingCallback(ACLMessage msg){
+        try{
+
+        }catch(Exception e){
+            showErrorMessage("Problem at testing callback "+e.getMessage());
+        }
+    }
 }

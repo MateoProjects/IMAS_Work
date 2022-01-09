@@ -1,1 +1,1 @@
-http://localhost:7778/acc
+http://Equipo.lan:7778/acc

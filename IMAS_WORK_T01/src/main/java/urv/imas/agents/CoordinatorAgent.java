@@ -37,12 +37,19 @@ public class CoordinatorAgent extends OurAgent
     protected int NumAttributesDataset;
 
     protected AID[] ClassifiersAIDs;
-    protected double[] ClassifiersPrecisions;
-    protected int NumTrainedClassifiers;
+
     protected List<Attribute> [] ClassifiersAttributes;
     protected List<Integer> [] ClassifiersAttributesInteger;
     protected Instances [] ClassifiersDatasets;
-    protected List<Double> [] WeightedPredictions;
+    protected ACLMessage TrainingReply;
+    protected double[] ClassifiersPrecisions;
+    protected double[] ClassifiersWeights;
+    protected int NumTrainedClassifiers;
+    protected ACLMessage TestingReply;
+    protected List<Integer>[] InstancesIdxPerClassifier;
+    protected List<Double>[] WeightedPredictions;
+    protected double[] TestingPredictions;
+    protected int NumTestedClassifiers;
 
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
@@ -76,12 +83,14 @@ public class CoordinatorAgent extends OurAgent
                 initialization(settings);
                 Instances dataset = (Instances)args[0];
                 train(dataset);
-                reply.setContent("Training done");
+                TrainingReply = reply;
+                reply = null;   // Don't answer now, wait for the results (at trainingCallback)
             }
             else if (type.equals("test")){
                 Instances[] testInstances = (Instances[])args[0];
-                double[] predictions = test(testInstances);
-                reply.setContentObject(predictions);
+                test(testInstances);
+                TestingReply = reply;
+                reply = null;   // Don't answer now, wait for the results (at testingCallback)
             }
             else
                 throw new Exception("Request type ["+type+"] unknown");
@@ -110,12 +119,12 @@ public class CoordinatorAgent extends OurAgent
         getClassifiersAIDs();
     }
 
-    protected void createClassifiers(){
+    protected void createClassifiers(){ // TODO: Adapt this for multiple calls
         showMessage("Creating "+NumClassifiers+" classifiers");
 
         ClassifiersAIDs = new AID[NumClassifiers];
         ClassifiersPrecisions = new double[NumClassifiers];
-        NumTrainedClassifiers = 0;
+        ClassifiersWeights = new double[NumClassifiers];
 
         // Reference from the virtual campus: https://campusvirtual.urv.cat/mod/page/view.php?id=2931726 (modified for creating agents in the current container)
         jade.wrapper.AgentContainer containerController = getContainerController();  // Get current container
@@ -166,6 +175,7 @@ public class CoordinatorAgent extends OurAgent
     ///////////////////////////////////////////////////////////////// Training /////////////////////////////////////////////////////////////////
     protected void train(Instances dataset){
         showMessage("Starting training");
+        NumTrainedClassifiers = 0;
 
         // Create the parallel behaviour for classifiers training
         ParallelBehaviour trainingBhv = new ParallelBehaviour(ParallelBehaviour.WHEN_ALL);
@@ -253,13 +263,22 @@ public class CoordinatorAgent extends OurAgent
             ClassifiersPrecisions[idx] = accuracy;
             showMessage("Accuracy for " + msg.getSender().getLocalName() + ": "+ accuracy);
 
+            // Check if
             NumTrainedClassifiers++;
             if(NumTrainedClassifiers >= NumClassifiers){
-                double avgAccuracy = 0;
+                // Compute classifier weights
+                double totalAccuracy = 0;
                 for(int i=0; i<ClassifiersPrecisions.length; i++)
-                    avgAccuracy += ClassifiersPrecisions[i];
-                avgAccuracy /= ClassifiersPrecisions.length;
-                showMessage("Training completed by "+NumTrainedClassifiers+" classifiers with an average accuracy of "+avgAccuracy);
+                    totalAccuracy += ClassifiersPrecisions[i];
+                for(int i=0; i<ClassifiersWeights.length; i++)
+                    ClassifiersWeights[i] = ClassifiersPrecisions[i] / totalAccuracy;
+
+                // Compute average accuracy
+                double avgAccuracy = totalAccuracy / ClassifiersPrecisions.length;
+
+                // Finally, send the reply
+                TrainingReply.setContent("Training completed by "+NumTrainedClassifiers+" classifiers with an average accuracy of "+avgAccuracy);
+                send(TrainingReply);
             }
         } catch (UnreadableException e) {
             showErrorMessage("Training callback failed for message: "+msg);
@@ -268,16 +287,19 @@ public class CoordinatorAgent extends OurAgent
 
 
     ///////////////////////////////////////////////////////////////// Test /////////////////////////////////////////////////////////////////
-    protected double[] test(Instances[] testInstances){
-
+    protected void test(Instances[] testInstances){
         showMessage("Starting testing");
-        double[] results = new double[testInstances.length];
+        TestingPredictions = new double[testInstances.length];
         int c,i;
 
         // Get classifier's used attributes
         List<Instances>[] instsPerClassifier = new List[NumClassifiers];
+        InstancesIdxPerClassifier = new List[NumClassifiers];
         for(c=0; c < instsPerClassifier.length; c++)
+        {
             instsPerClassifier[c] = new LinkedList<Instances>();
+            InstancesIdxPerClassifier[c] = new LinkedList<Integer>();
+        }
 
         // Get instances attributes
         List<Attribute>[] attrsPerInstance = new List[testInstances.length];
@@ -302,9 +324,14 @@ public class CoordinatorAgent extends OurAgent
             for(i=0; i < testInstances.length; i++) {
                 inst = new Instances(testInstances[i]);    // Create a copy
                 filterAttributes(inst, attrsPerInstance[i], classifierAttrs);
-                if (inst.numAttributes() == classifierAttrs.size()+1) // If contains all the attributes
+                if (inst.numAttributes() == classifierAttrs.size()+1)
+                {
+                    // If contains all the attributes
                     instsPerClassifier[c].add(inst);
+                    InstancesIdxPerClassifier[c].add(i);
+                }
             }
+
             // If there is an instance -> Create message and send test request
             if(instsPerClassifier[c].size() > 0){
                 Object[] content = new Object[1];
@@ -314,23 +341,6 @@ public class CoordinatorAgent extends OurAgent
             }
         }
         addBehaviour(pb);
-
-        // TODO: Wait for the results
-        /*try {
-            TimeUnit.SECONDS.sleep(5);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }*/
-
-        /*for (int k = 0; k < NumClassifiers; k++)
-        {
-            showMessage("Weighted predictions for " + k);
-            showMessage(WeightedPredictions[k].toString());
-        }*/
-
-
-
-        return results;
     }
 
     protected Instances filterAttributes(Instances inst, List<Attribute> instAttrs, List<Attribute> desiredAttrs){
@@ -351,17 +361,37 @@ public class CoordinatorAgent extends OurAgent
     protected void testingCallback(ACLMessage msg){
         try {
             String classifier_name = msg.getSender().getLocalName();
-            int classifier_ID = classifier_name.charAt(classifier_name.length()-1) - '0';
+            int classifierIdx = classifierNameToIdx(classifier_name);
             double[] predictions  = (double[]) msg.getContentObject();
             showMessage("A total of "+predictions.length+" have been received from "+classifier_name);
 
-            // WEIGHTED_PREDS = [((PREDICTIONS*2)-1)*VALIDATION_ACCURACY]
+            // Accumulate WEIGHTED_PREDS = [((PREDICTIONS*2)-1)*VALIDATION_ACCURACY]
+            int instanceIdx;
             for (int i = 0; i < predictions.length; i++)
             {
-                Double res = (predictions[i]*2-1)*ClassifiersPrecisions[classifier_ID];
-                WeightedPredictions[classifier_ID].add(res);
+                Double res = (predictions[i]*2-1)*ClassifiersWeights[classifierIdx];
+                instanceIdx = InstancesIdxPerClassifier[classifierIdx].get(i);
+                TestingPredictions[instanceIdx] += res;
             }
 
+            // Check if all classifiers have finished
+            NumTestedClassifiers++;
+            if (NumTestedClassifiers == NumClassifiers){
+                // Discretice predicitons
+                for (int i = 0; i < predictions.length; i++)
+                    TestingPredictions[i] = (TestingPredictions[i]>0) ? 1.0 : 0.0;
+
+                // Finally, send the reply
+                try{
+                    TestingReply.setContentObject(TestingPredictions);
+                    send(TestingReply);
+                }catch(Exception e){
+                    TestingReply.setPerformative(ACLMessage.FAILURE);
+                    TestingReply.setContent("ERROR during results gathering: "+e.getMessage());
+                    send(TestingReply);
+                }
+                showMessage("Testing completed");
+            }
 
         } catch (UnreadableException e) {
             showErrorMessage("Testing callback failed for message: "+msg);
