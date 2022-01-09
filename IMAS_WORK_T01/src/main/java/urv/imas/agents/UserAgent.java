@@ -35,6 +35,7 @@ public class UserAgent extends OurAgent
     private int NumClassifiers;
     private int NumTrainingInstances;
     private int NumTestInstances;
+    private int NumTestSubsetInstances;
     private int NumTestAttributes;
     private int NumInstancesPerClassifier;
     private int NumValidationInstancesPerClassifier;
@@ -45,7 +46,7 @@ public class UserAgent extends OurAgent
     private Instances Dataset;
     private Instances TrainDataset;
     private Instances TestDataset;
-    private Instances OriginalTestDataset;
+    private Instances TestingSubset;
 
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
@@ -92,6 +93,7 @@ public class UserAgent extends OurAgent
             DatasetFileName = document.getElementsByTagName("dataset_filename").item(0).getTextContent();
             NumTrainingInstances = Integer.parseInt(document.getElementsByTagName("num_training_instances").item(0).getTextContent());
             NumTestInstances = Integer.parseInt(document.getElementsByTagName("num_test_instances").item(0).getTextContent());
+            NumTestSubsetInstances = Integer.parseInt(document.getElementsByTagName("num_test_subset_instances").item(0).getTextContent());
             NumTestAttributes = Integer.parseInt(document.getElementsByTagName("num_test_attributes").item(0).getTextContent());
             NumInstancesPerClassifier = Integer.parseInt(document.getElementsByTagName("num_instances_per_classifier").item(0).getTextContent());
             NumValidationInstancesPerClassifier = Integer.parseInt(document.getElementsByTagName("num_validation_instances_per_classifier").item(0).getTextContent());
@@ -119,9 +121,6 @@ public class UserAgent extends OurAgent
             amount = NumTestInstances;
             TestDataset = new Instances(Dataset, iniIdx, amount);
             TestDataset.setClassIndex(TestDataset.numAttributes()-1);
-
-            OriginalTestDataset = new Instances(TestDataset);
-            OriginalTestDataset.setClassIndex(TestDataset.classIndex());
         }catch(Exception e){
             showErrorMessage("while reading dataset:\n" + e.getMessage());
         }
@@ -148,14 +147,23 @@ public class UserAgent extends OurAgent
         return createOurMessageRequest(CoordinatorAID, type, args);
     }
 
-    protected Instances[] generateTestInstances(Instances dataset){
-        Instances[] testInstances = new Instances[dataset.numInstances()];
-        List<Integer> attributesIndexes = IntStream.range(0, dataset.numAttributes()).boxed().collect(Collectors.toList());
+    protected Instances[] generateTestInstances(Instances testDataset){
+        // Randomize
+        Random rng = new Random();
+        testDataset.randomize(rng);
+
+        // Get the test subset
+        TestingSubset = new Instances(testDataset, 0, NumTestSubsetInstances);
+        TestingSubset.setClassIndex(testDataset.classIndex());
+
+        // Random attributes processing
+        Instances[] testInstances = new Instances[TestingSubset.numInstances()];
+        List<Integer> attributesIndexes = IntStream.range(0, TestingSubset.numAttributes()).boxed().collect(Collectors.toList());
         List<Integer> attributesSublist;
         Instances inst;
         String a;
-        for (int i=0; i < dataset.numInstances(); i++){
-            inst = new Instances(dataset, i, 1);
+        for (int i=0; i < TestingSubset.numInstances(); i++){
+            inst = new Instances(TestingSubset, i, 1);
 
             // Get a subset of attributes
             Collections.shuffle(attributesIndexes);
@@ -196,7 +204,7 @@ public class UserAgent extends OurAgent
             for (int i = 0; i < predictions.length; i++)
             {
                 pred = predictions[i];
-                trueLabel = OriginalTestDataset.get(i).classValue();
+                trueLabel = TestingSubset.get(i).classValue();
                 // If positive
                 if (pred == 1){
                     if(pred == trueLabel)

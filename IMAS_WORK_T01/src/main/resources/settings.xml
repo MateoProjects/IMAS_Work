@@ -3,6 +3,7 @@
     <dataset_filename>audit_risk.arff</dataset_filename>
     <num_training_instances>717</num_training_instances>
     <num_test_instances>50</num_test_instances>
+    <num_test_subset_instances>15</num_test_subset_instances>
     <num_test_attributes>20</num_test_attributes>
     <num_instances_per_classifier>300</num_instances_per_classifier>
     <num_validation_instances_per_classifier>75</num_validation_instances_per_classifier>
