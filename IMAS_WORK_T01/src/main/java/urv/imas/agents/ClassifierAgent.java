@@ -62,6 +62,7 @@ public class ClassifierAgent extends OurAgent
                 Instances dataset = (Instances) args[0];
                 int numValidationInstances = (int)args[1];
                 double accuracy = train(dataset, numValidationInstances);
+                System.out.println("Graph for classifier: " + classifier.graph())
                 reply.setContentObject(accuracy);
             } else if (type.equals("test")) {
                 List<Instances> instances = (List<Instances>)args[0];
