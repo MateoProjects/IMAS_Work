@@ -13,12 +13,11 @@ import java.util.*;
 
 
 
-/** Inner class OurAgent.
- * This class implements the behaviour used by the ClassifierAgent to send a
- * REQUEST message to the CoordinatorAgent.
- * @author Anna Garriga & Ramon Mateo
- * @version  $Date: 2022-01-08 
- * */
+/**
+ * This agent implements the Classifier Agent that performs the training and testing requests from the coordinator.
+ * @author Team 1: Sergi Albiach, Anna Garriga, Benet Manzanares and Ramon Mateo.
+ * @version  $Date: 2022-01-09 14:00:00 +0100 (Barcelona, 09 January 2022) $ $Revision: 1 $
+ */
 public class ClassifierAgent extends OurAgent
 {
     private AID CoordinatorAID;

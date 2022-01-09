@@ -6,25 +6,23 @@ import jade.core.AID;
 import jade.core.behaviours.SequentialBehaviour;
 import jade.lang.acl.ACLMessage;
 
-import urv.imas.utils.OurMessage;
 import weka.core.Attribute;
 import weka.core.Instances;
-import weka.core.Instance;
-import weka.core.DenseInstance;
 import weka.core.converters.ConverterUtils.DataSource;
 
 import javax.xml.parsers.*;
 import java.io.File;
 import org.w3c.dom.*;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 
 /**
- * This agent implements a simple Uset Agent that loads settings, datasets and starts training and testing. *
- * @author Team 1
+ * This agent implements the User Agent that loads the settings, the datasets and initiates the
+ * training and testing phases.
+ * @author Team 1: Sergi Albiach, Anna Garriga, Benet Manzanares and Ramon Mateo.
+ * @version  $Date: 2022-01-09 14:00:00 +0100 (Barcelona, 09 January 2022) $ $Revision: 1 $
  */
 public class UserAgent extends OurAgent
 {
@@ -47,6 +45,7 @@ public class UserAgent extends OurAgent
     private Instances Dataset;
     private Instances TrainDataset;
     private Instances TestDataset;
+    private Instances OriginalTestDataset;
 
 
     ///////////////////////////////////////////////////////////////// Initialization /////////////////////////////////////////////////////////////////
@@ -76,7 +75,7 @@ public class UserAgent extends OurAgent
 
         // Testing phase
         ACLMessage testDatasetMsg = startTrainingOrTestMsg(false, TestDataset);
-        sb.addSubBehaviour(new OurRequestInitiator(this, testDatasetMsg, "Testing phase"));
+        sb.addSubBehaviour(new OurRequestInitiator(this, testDatasetMsg, "Testing phase", this::testingCallback));
 
         // Add the sequential behaviour
         addBehaviour(sb);
@@ -119,19 +118,31 @@ public class UserAgent extends OurAgent
             iniIdx = iniIdx + amount;
             amount = NumTestInstances;
             TestDataset = new Instances(Dataset, iniIdx, amount);
+            TestDataset.setClassIndex(TestDataset.numAttributes()-1);
+
+            OriginalTestDataset = new Instances(TestDataset);
+            OriginalTestDataset.setClassIndex(TestDataset.classIndex());
+
+            TestDataset.setClassIndex(-1);
+
             TestDataset.deleteAttributeAt(TestDataset.numAttributes()-1);   // Delete class attribute
             TestDataset.insertAttributeAt(new Attribute("class_label"), TestDataset.numAttributes());
+
             TestDataset.setClassIndex(TestDataset.numAttributes()-1);
+
+            /*showMessage("Fucking dataset"); //TODO: DELETE
+            //showMessage(TestDataset.get(0).toString());
+            List<Attribute> ll = Collections.list(TestDataset.enumerateAttributes());
+            showMessage("Attributes: " + Arrays.toString(ll.toArray()));*/
+
         }catch(Exception e){
-            showMessage("ERROR while reading dataset:\n" + e.getMessage());
+            showErrorMessage("while reading dataset:\n" + e.getMessage());
         }
     }
 
 
     ///////////////////////////////////////////////////////////////// Training and test /////////////////////////////////////////////////////////////////
     protected ACLMessage startTrainingOrTestMsg(boolean isTraining, Instances dataset){
-        // Create content
-        OurMessage content;
         String type;
         Object[] args;
         if (isTraining){
@@ -186,6 +197,15 @@ public class UserAgent extends OurAgent
 
     protected void testingCallback(ACLMessage msg){
         try{
+            double [] content = (double []) msg.getContentObject();
+            showMessage("Predictions: " + Arrays.toString(content));
+            double acc = 0;
+            for (int i = 0; i < content.length; i++)
+            {
+                acc += (OriginalTestDataset.get(i).classValue()==content[i]) ? 1 : 0;
+            }
+            acc = acc / content.length;
+            showMessage("The overall accuracy is " + acc);
 
         }catch(Exception e){
             showErrorMessage("Problem at testing callback "+e.getMessage());

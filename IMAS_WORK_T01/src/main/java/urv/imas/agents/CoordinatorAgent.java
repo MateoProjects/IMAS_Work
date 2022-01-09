@@ -12,20 +12,15 @@ import weka.core.Attribute;
 import weka.core.Instances;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 
-
 /**
- * This agent implements a simple Ping Agent that registers itself with the DF and
- * then waits for ACLMessages.
- * If  a REQUEST message is received containing the string "ping" within the content
- * then it replies with an INFORM message whose content will be the string "pong".
- *
- * @author Tiziana Trucco - CSELT S.p.A.
- * @version  $Date: 2010-04-08 13:08:55 +0200 (gio, 08 apr 2010) $ $Revision: 6297 $
+ * This agent implements the Coordinator Agent that receives the training and testing requests, creates the classifiers,
+ * splits the datasets and gathers the results of the prediction and testing request to the classifiers.
+ * @author Team 1: Sergi Albiach, Anna Garriga, Benet Manzanares and Ramon Mateo.
+ * @version  $Date: 2022-01-09 14:00:00 +0100 (Barcelona, 09 January 2022) $ $Revision: 1 $
  */
 public class CoordinatorAgent extends OurAgent
 {
@@ -166,7 +161,9 @@ public class CoordinatorAgent extends OurAgent
         int v = 0;
         try{
             v = Integer.parseInt(name.replaceAll("[\\D]", ""));
-        }catch(Exception e){}   // Not possible
+        }catch(Exception e){
+            showErrorMessage("This should not happen: " + e.getMessage()); // Not possible
+        }
 
         return v;
     }
@@ -221,7 +218,7 @@ public class CoordinatorAgent extends OurAgent
             dataset.randomize(rng);
             classifierDataset = new Instances(dataset, 0, NumInstancesPerClassifier);
             classifierDataset.setClassIndex(classifierDataset.numAttributes() - 1);
-            classifierDataset = filterAttributes(classifierDataset, ClassifiersAttributesInteger[c]);
+            filterAttributes(classifierDataset, ClassifiersAttributesInteger[c]);
 
             // Create message and send training request to classifier
             content = new Object[2];
@@ -233,17 +230,9 @@ public class CoordinatorAgent extends OurAgent
             trainingBhv.addSubBehaviour(new OurRequestInitiator(this, msg, "Training phase for classifier " + c,(this::trainingCallback)));
         }
         addBehaviour(trainingBhv);
-
-        // TODO: Wait all trainings to finish
-        /*while(NumTrainedClassifiers < NumClassifiers){
-            showMessage("Wait");
-            try{
-                TimeUnit.SECONDS.sleep(1);
-            }catch(java.lang.InterruptedException e){}  // Suppress
-        }*/
     }
 
-    protected Instances filterAttributes(Instances dataset, List<Integer> desiredAttrsIdxs){
+    protected void filterAttributes(Instances dataset, List<Integer> desiredAttrsIdxs){
         int deleted = 0;
         int total = dataset.numAttributes();
 
@@ -253,7 +242,6 @@ public class CoordinatorAgent extends OurAgent
                 dataset.deleteAttributeAt(i-deleted);
                 deleted += 1;
             }
-        return dataset;
     }
 
     protected void trainingCallback(ACLMessage msg){
@@ -268,8 +256,9 @@ public class CoordinatorAgent extends OurAgent
             if(NumTrainedClassifiers >= NumClassifiers){
                 // Compute classifier weights
                 double totalAccuracy = 0;
-                for(int i=0; i<ClassifiersPrecisions.length; i++)
-                    totalAccuracy += ClassifiersPrecisions[i];
+                for (double classifiersPrecision : ClassifiersPrecisions)
+                    totalAccuracy += classifiersPrecision;
+
                 for(int i=0; i<ClassifiersWeights.length; i++)
                     ClassifiersWeights[i] = ClassifiersPrecisions[i] / totalAccuracy;
 
@@ -297,8 +286,8 @@ public class CoordinatorAgent extends OurAgent
         InstancesIdxPerClassifier = new List[NumClassifiers];
         for(c=0; c < instsPerClassifier.length; c++)
         {
-            instsPerClassifier[c] = new LinkedList<Instances>();
-            InstancesIdxPerClassifier[c] = new LinkedList<Integer>();
+            instsPerClassifier[c] = new LinkedList<>();
+            InstancesIdxPerClassifier[c] = new LinkedList<>();
         }
 
         // Get instances attributes
@@ -343,7 +332,7 @@ public class CoordinatorAgent extends OurAgent
         addBehaviour(pb);
     }
 
-    protected Instances filterAttributes(Instances inst, List<Attribute> instAttrs, List<Attribute> desiredAttrs){
+    protected void filterAttributes(Instances inst, List<Attribute> instAttrs, List<Attribute> desiredAttrs){
         Attribute attr;
         int numDeleted = 0;
         for (int i=0; i < instAttrs.size(); i++){
@@ -354,8 +343,6 @@ public class CoordinatorAgent extends OurAgent
                 numDeleted++;    // To compensate
             }
         }
-
-        return inst;
     }
 
     protected void testingCallback(ACLMessage msg){
@@ -369,7 +356,7 @@ public class CoordinatorAgent extends OurAgent
             int instanceIdx;
             for (int i = 0; i < predictions.length; i++)
             {
-                Double res = (predictions[i]*2-1)*ClassifiersWeights[classifierIdx];
+                double res = (predictions[i]*2-1)*ClassifiersWeights[classifierIdx];
                 instanceIdx = InstancesIdxPerClassifier[classifierIdx].get(i);
                 TestingPredictions[instanceIdx] += res;
             }
@@ -378,8 +365,9 @@ public class CoordinatorAgent extends OurAgent
             NumTestedClassifiers++;
             if (NumTestedClassifiers == NumClassifiers){
                 // Discretice predicitons
-                for (int i = 0; i < predictions.length; i++)
+                for (int i = 0; i < TestingPredictions.length; i++){
                     TestingPredictions[i] = (TestingPredictions[i]>0) ? 1.0 : 0.0;
+                }
 
                 // Finally, send the reply
                 try{
